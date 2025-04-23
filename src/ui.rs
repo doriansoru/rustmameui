@@ -2,7 +2,6 @@ use dioxus::prelude::*;
 use crate::rustmameuiconfig::Config;
 use crate::game::Game;
 use rfd::FileDialog;
-use rust_i18n::t;
 
 const TABS_CSS: Asset = asset!("/assets/tabs.css");
 const ABOUT: Asset = asset!("/assets/about.svg");
@@ -15,7 +14,7 @@ pub fn draw() {
     fn launch_app() {
         let window = dioxus::desktop::tao::window::WindowBuilder::new()
         .with_resizable(true)
-        .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(1280.0, 960.0))
+        .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(1024.0, 860.0))
         .with_title::<&str>(APP_NAME);
         dioxus::LaunchBuilder::new().with_cfg(dioxus::desktop::Config::new().with_window(window).with_menu(None)).launch(App);
     }
@@ -30,7 +29,7 @@ pub fn draw() {
 
 
 fn check_dialog_utility() -> Result<(), String> {
-    // Controlla se zenity o kdialog sono installati
+    // Check if zenity or kdialog are installed
     let mut found = false;
     if which::which("zenity").is_ok() {
         found = true;
@@ -67,9 +66,9 @@ fn App() -> Element {
     let mut snap_data = use_signal(|| "".to_string());
     let mut favourite_snap_data = use_signal(|| "".to_string());
 
-    // Usa i segnali dallo stato dell'app
-    let mut games = use_context_provider(|| Signal::new(crate::games::load(&config).unwrap()));
-    let mut favourites = use_context_provider(|| Signal::new(crate::games::load_favourites(&config).unwrap()));
+    // Use signals for games and favourites
+    let mut games = use_signal(|| crate::games::load(&config).unwrap());
+    let mut favourites = use_signal(|| crate::games::load_favourites(&config).unwrap());
     // Signal to track the rom, description and snap of the selected game
     let mut selected_game = use_signal(|| (String::new(), String::new(), false)); // (rom, description, snap)
     let mut selected_favourite = use_signal(|| (String::new(), String::new(), false)); // (rom, description, snap)
@@ -101,7 +100,7 @@ fn App() -> Element {
     let handle_context_menu = move |event: Event<MouseData>| {
         event.stop_propagation();
         event.prevent_default();
-        // Usa entrambe le coordinate client (o entrambe screen) per coerenza
+        // Use client coordinates
         let (x, y) = (event.coordinates().client().x as i32, event.coordinates().client().y as i32);
         menu_x.set(x);
         menu_y.set(y);
@@ -206,9 +205,9 @@ fn App() -> Element {
                                 if show_context_menu() {
                                     rsx! {
                                         div {
-                                            // Stile di debug per rendere il popup molto visibile
-                                            style: "position: fixed; background-color: rgba(0, 0, 0, 0.5); color: white; border: 2px solid black; box-shadow: 0 0 10px black; z-index: 9999; padding: 0px; left: {menu_x()}px; top: {menu_y()}px; min-width: 150px; min-height: 50px;",
-
+                                            class: "popup",
+                                            // Popup coordinates
+                                            style: "left: {menu_x()}px; top: {menu_y()}px;",
                                             div {
                                                 style: "cursor: pointer; padding: 10px;",
                                                 onclick: move |_| {
@@ -311,8 +310,9 @@ fn App() -> Element {
                                 if show_context_menu() {
                                     rsx! {
                                         div {
-                                            // Stile di debug per rendere il popup molto visibile
-                                            style: "position: fixed; background-color: rgba(0, 0, 0, 0.5); color: white; border: 2px solid black; box-shadow: 0 0 10px black; z-index: 9999; padding: 0px; left: {menu_x()}px; top: {menu_y()}px; min-width: 150px; min-height: 50px;",
+                                            class: "popup",
+                                            // Popup coordinates
+                                            style: "left: {menu_x()}px; top: {menu_y()}px;",
 
                                             div {
                                                 style: "cursor: pointer; padding: 10px;",
@@ -377,7 +377,7 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(file) = FileDialog::new()
-                                            .add_filter("All files", &["*"]) // Filtro per tutti i file
+                                            .add_filter("All files", &["*"]) // Filter for all files
                                             .pick_file() {
                                             mame_executable.set(file);
                                         }
@@ -407,7 +407,7 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(directory) = FileDialog::new()
-                                            .add_filter("All files", &["*"]) // Filtro per tutti i file
+                                            .add_filter("All files", &["*"]) // Filter for all files
                                             .pick_folder() {
                                             roms_path.set(directory);
                                         }
@@ -437,7 +437,7 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(file) = FileDialog::new()
-                                            .add_filter("Zip file", &["*.zip"]) // Filtro per tutti i file zip
+                                            .add_filter("Zip file", &["*.zip"]) // Filter for all zip files
                                             .pick_file() {
                                             snap_file.set(file);
                                         }
@@ -464,7 +464,7 @@ fn App() -> Element {
                                                 status.set("The settings have been saved correctly.".into());
                                             },
                                             Err(e) => {
-                                                status.set(format!("Errore while saving settings: {}", e));
+                                                status.set(format!("Error while saving settings: {}", e));
                                             }
                                         }
                                     },
