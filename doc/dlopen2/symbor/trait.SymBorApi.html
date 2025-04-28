@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Trait for automatic loading of symbols from library."><title>SymBorApi in dlopen2::symbor - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dlopen2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../dlopen2/index.html">dlopen2</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">SymBor<wbr>Api</a></h2><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.load" title="load">load</a></li></ul><h3><a href="#dyn-compatibility">Dyn Compatibility</a></h3><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In dlopen2::<wbr>symbor</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dlopen2</a>::<wbr><a href="index.html">symbor</a></div><h1>Trait <span class="trait">SymBorApi</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dlopen2/symbor/api.rs.html#65-70">Source</a> </span></div><pre class="rust item-decl"><code>pub trait SymBorApi&lt;'a&gt;<div class="where">where
+    Self: <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,</div>{
+    // Required method
+    unsafe fn <a href="#tymethod.load" class="fn">load</a>(lib: &amp;'a <a class="struct" href="struct.Library.html" title="struct dlopen2::symbor::Library">Library</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../enum.Error.html" title="enum dlopen2::Error">Error</a>&gt;;
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Trait for automatic loading of symbols from library.</p>
+<p>This trait is intended to be used together with the <code>derive</code> macro.
+To use it you need to define a structure, create several fields that
+implement the <code>FromRawResult</code> trait and then simply use the automatically
+generated <code>load(&amp;Library)</code> function to load all symbols from previously opened library.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::symbor::{Library, Symbol, SymBorApi, PtrOrNull, RefMut, PtrOrNullMut};
+<span class="kw">use </span>std::os::raw::{c_double, c_char};
+
+<span class="attr">#[derive(SymBorApi)]
+</span><span class="kw">struct </span>Example&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub </span>simple_fun: Symbol&lt;<span class="lifetime">'a</span>, <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>()&gt;,
+    <span class="kw">pub </span>complex_fun: Symbol&lt;<span class="lifetime">'a</span>, <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(c_double)-&gt;c_double&gt;,
+    <span class="kw">pub </span>optional_fun: <span class="prelude-ty">Option</span>&lt;Symbol&lt;<span class="lifetime">'a</span>, <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>()&gt;&gt;,
+    <span class="kw">pub </span>nullable_ptr: PtrOrNullMut&lt;<span class="lifetime">'a</span>, c_char&gt;,
+    <span class="kw">pub </span>mut_ref_i32: Symbol&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i32&gt;,
+    <span class="attr">#[dlopen2_name=<span class="string">"mut_ref_i32"</span>]
+    </span><span class="kw">pub </span>the_same_mut_ref_i32: RefMut&lt;<span class="lifetime">'a</span>, i32&gt;,
+    <span class="kw">pub </span>not_nullable_ptr: Symbol&lt;<span class="lifetime">'a</span>, * <span class="kw-2">mut </span>c_double&gt;
+}
+
+<span class="kw">fn </span>main(){
+    <span class="kw">let </span>lib = Library::open(<span class="string">"example.dll"</span>).expect(<span class="string">"Could not open library"</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>api = <span class="kw">unsafe</span>{Example::load(<span class="kw-2">&amp;</span>lib)}.expect(<span class="string">"Could not load symbols"</span>);
+    <span class="kw">unsafe</span>{(api.simple_fun)()};
+    <span class="kw">let _ </span>= <span class="kw">unsafe</span>{(api.complex_fun)(<span class="number">1.0</span>)};
+    <span class="kw">match </span>api.optional_fun {
+        <span class="prelude-val">Some</span>(fun) =&gt; <span class="kw">unsafe </span>{fun()},
+        <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">"Optional function could not be loaded"</span>),
+    };
+    <span class="kw">if </span>api.nullable_ptr.is_null(){
+        <span class="macro">println!</span>(<span class="string">"Library has a null symbol"</span>);
+    }
+    <span class="comment">//while Symbol is good for everything, RefMut requires one less dereference to use
+    </span><span class="kw-2">**</span>api.mut_ref_i32 =<span class="number">34</span>;
+    <span class="kw-2">*</span>api.the_same_mut_ref_i32 =<span class="number">35</span>;
+    <span class="kw">unsafe</span>{<span class="kw-2">**</span>api.not_nullable_ptr = <span class="number">55.0</span>};
+    <span class="kw">unsafe</span>{<span class="kw-2">**</span>api.nullable_ptr = <span class="number">0</span>};
+}</code></pre></div>
+<p>Please notice several supported features:</p>
+<ul>
+<li>By default <code>SymBorApi</code> uses the field name to obtain a symbol from the library.
+You can override the symbol name using the <code>dlopen2_name</code> attribute.</li>
+<li>All kind of objects from the <code>symbor</code> module implement the Deref or DerefMut trait.
+This means that you can use them as if you would use primitive types that they wrap.</li>
+<li>You can obtain optional symbols. This is very useful when you are dealing with
+different versions of libraries and the new versions support more functions.
+If it is not possible to obtain the given symbol, the option is set to `None’,
+otherwise it contains the obtained symbol.</li>
+<li>Both <code>Symbol</code> and <code>Ref</code> or <code>RefMut</code> can be used to obtain references to statically
+allocated objects. But <code>Ref</code> and <code>RefMut</code> are just easier to use - they require
+less dereferences to access the final value.
+Actually they behave like a normal reference does, it just that they implement the
+<code>FromRawResult</code> interface that allows them to be used inside structures that implement
+the <code>SymBorApi</code> trait.</li>
+</ul>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><section id="tymethod.load" class="method"><a class="src rightside" href="../../src/dlopen2/symbor/api.rs.html#69">Source</a><h4 class="code-header">unsafe fn <a href="#tymethod.load" class="fn">load</a>(lib: &amp;'a <a class="struct" href="struct.Library.html" title="struct dlopen2::symbor::Library">Library</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../enum.Error.html" title="enum dlopen2::Error">Error</a>&gt;</h4></section></div><h2 id="dyn-compatibility" class="section-header">Dyn Compatibility<a href="#dyn-compatibility" class="anchor">§</a></h2><div class="dyn-compatibility-info"><p>This trait is <b>not</b> <a href="https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility">dyn compatible</a>.</p><p><i>In older versions of Rust, dyn compatibility was called "object safety", so this trait is not object safe.</i></p></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"></div><script src="../../trait.impl/dlopen2/symbor/api/trait.SymBorApi.js" async></script></section></div></main></body></html>

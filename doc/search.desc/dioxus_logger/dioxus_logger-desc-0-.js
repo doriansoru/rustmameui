@@ -1,0 +1,1 @@
+searchState.loadedDescShard("dioxus_logger", 0, "Initialize <code>dioxus-logger</code> with a specified max filter.\nAttempt to initialize the subscriber if it doesn’t …")

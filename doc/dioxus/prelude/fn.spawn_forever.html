@@ -1,0 +1,148 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Spawn a future that Dioxus won’t clean up when this component is unmounted"><title>spawn_forever in dioxus::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus/index.html">dioxus</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">spawn_<wbr>forever</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#example" title="Example">Example</a><ul><li><a href="#compiler-errors-you-may-run-into-while-using-spawn" title="Compiler errors you may run into while using spawn">Compiler errors you may run into while using spawn</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus</a>::<wbr><a href="index.html">prelude</a></div><h1>Function <span class="fn">spawn_forever</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_core/global_context.rs.html#206">Source</a> </span></div><pre class="rust item-decl"><code>pub fn spawn_forever(fut: impl <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="primitive" href="https://doc.rust-lang.org/1.86.0/std/primitive.unit.html">()</a>&gt; + 'static) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.Task.html" title="struct dioxus::prelude::Task">Task</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Spawn a future that Dioxus won’t clean up when this component is unmounted</p>
+<p>This is good for tasks that need to be run after the component has been dropped.</p>
+<p><strong>This will run the task in the root scope. Any calls to global methods inside the future (including <code>context</code>) will be run in the root scope.</strong></p>
+<h2 id="example"><a class="doc-anchor" href="#example">§</a>Example</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="comment">// The parent component can create and destroy children dynamically
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span><span class="kw-2">mut </span>count = use_signal(|| <span class="number">0</span>);
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| count += <span class="number">1</span>,
+            <span class="string">"Increment"
+        </span>}
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| count -= <span class="number">1</span>,
+            <span class="string">"Decrement"
+        </span>}
+
+        <span class="kw">for </span>id <span class="kw">in </span><span class="number">0</span>..<span class="number">10 </span>{
+            Child { id }
+        }
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Child(id: i32) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="comment">// This will spawn a task in the root scope that will run forever
+                // It will keep running even if you drop the child component by decreasing the count
+                </span>spawn_forever(<span class="kw">async move </span>{
+                    <span class="kw">loop </span>{
+                        tokio::time::sleep(std::time::Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
+                        <span class="macro">println!</span>(<span class="string">"Running task spawned in child component {id}"</span>);
+                    }
+                });
+            },
+            <span class="string">"Spawn background task"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="compiler-errors-you-may-run-into-while-using-spawn"><a class="doc-anchor" href="#compiler-errors-you-may-run-into-while-using-spawn">§</a>Compiler errors you may run into while using spawn</h3><details>
+<summary>async block may outlive the current function, but it borrows `value`, which is owned by the current function</summary>
+<p>Tasks in Dioxus need only access data that can last for the entire lifetime of the application. That generally means data that is moved into the async block. <strong>If you get this error, you may have forgotten to add <code>move</code> to your async block.</strong></p>
+<p>Broken component:</p>
+
+<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>signal = use_signal(|| <span class="number">0</span>);
+
+    use_hook(<span class="kw">move </span>|| {
+        <span class="comment">// ❌ The task may run at any point and reads the value of the signal, but the signal is dropped at the end of the function
+        </span>spawn(<span class="kw">async </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, signal());
+        })
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<p>Fixed component:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>signal = use_signal(|| <span class="number">0</span>);
+
+    use_hook(<span class="kw">move </span>|| {
+        <span class="comment">// ✅ The `move` keyword tells rust it can move the `state` signal into the async block. Since the async block owns the signal state, it can read it even after the function returns
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, signal());
+        })
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+</details>
+<details>
+<summary>use of moved value: `value`. move occurs because `value` has type `YourType`, which does not implement the `Copy` trait</summary>
+<p>Data in rust has a single owner. If you run into this error, you have likely tried to move data that isn’t <code>Copy</code> into two different async tasks. <strong>You can fix this issue by making your data <code>Copy</code> or calling <code>clone</code> on it before you move it into the async block.</strong></p>
+<p>Broken component:</p>
+
+<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts a string which cannot be copied implicitly
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: String) -&gt; Element {
+    use_hook(<span class="kw">move </span>|| {
+        <span class="comment">// ❌ We are moving the string into the async task which means we can't access it elsewhere
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+        });
+        <span class="comment">// ❌ Since we already moved the string, we can't move it into our new task. This will cause a compiler error
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+        })
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<p>You can fix this issue by either:</p>
+<ul>
+<li>Making your data <code>Copy</code> with <code>ReadOnlySignal</code>:</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts `ReadOnlySignal&lt;String&gt;` which implements `Copy`
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: ReadOnlySignal&lt;String&gt;) -&gt; Element {
+    use_hook(<span class="kw">move </span>|| {
+        <span class="comment">// ✅ Because the `string` signal is `Copy`, we can copy it into the async task while still having access to it elsewhere
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+        });
+        <span class="comment">// ✅ Since `string` is `Copy`, we can copy it into another async task
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+        })
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<ul>
+<li>Calling <code>clone</code> on your data before you move it into the closure:</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts a string which doesn't implement `Copy`
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: String) -&gt; Element {
+    use_hook(<span class="kw">move </span>|| {
+        <span class="comment">// ✅ The string only has one owner. We could move it into this closure, but since we want to use the string in other closures later, we will clone it instead
+        </span>spawn({
+            <span class="comment">// Clone the string in a new block
+            </span><span class="kw">let </span>string = string.clone();
+            <span class="comment">// Then move the cloned string into the async block
+            </span><span class="kw">async move </span>{
+                <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+            }
+        });
+        <span class="comment">// ✅ We don't use the string after this closure, so we can just move it into the closure directly
+        </span>spawn(<span class="kw">async move </span>{
+            <span class="macro">println!</span>(<span class="string">"{}"</span>, string);
+        })
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+</details></div></details></section></div></main></body></html>

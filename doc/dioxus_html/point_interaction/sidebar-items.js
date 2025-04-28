@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["SerializedPointInteraction"],"trait":["InteractionElementOffset","InteractionLocation","ModifiersInteraction","PointerInteraction"]};

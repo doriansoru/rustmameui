@@ -1,0 +1,77 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Generates bindings for batched calls to js functions. The generated code is a Buffer struct with methods for each function."><title>bindgen in sledgehammer_bindgen_macro - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sledgehammer_bindgen_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sledgehammer_bindgen_macro/index.html">sledgehammer_<wbr>bindgen_<wbr>macro</a><span class="version">0.6.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">bindgen</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#generates-bindings-for-batched-calls-to-js-functions-the-generated-code-is-a-buffer-struct-with-methods-for-each-function" title="Generates bindings for batched calls to js functions. The generated code is a Buffer struct with methods for each function.">Generates bindings for batched calls to js functions. The generated code is a Buffer struct with methods for each function.</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate sledgehammer_<wbr>bindgen_<wbr>macro</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">sledgehammer_bindgen_macro</a></div><h1>Attribute Macro <span class="attr">bindgen</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sledgehammer_bindgen_macro/lib.rs.html#152-156">Source</a> </span></div><pre class="rust item-decl"><code>#[bindgen]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="generates-bindings-for-batched-calls-to-js-functions-the-generated-code-is-a-buffer-struct-with-methods-for-each-function"><a class="doc-anchor" href="#generates-bindings-for-batched-calls-to-js-functions-the-generated-code-is-a-buffer-struct-with-methods-for-each-function">§</a>Generates bindings for batched calls to js functions. The generated code is a Buffer struct with methods for each function.</h2>
+<p><strong>The function calls to the generated methods are queued and only executed when flush is called.</strong></p>
+<p>Some of the code generated uses the <code>sledgehammer_utils</code> crate, so you need to add that crate as a dependency.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[bindgen]
+</span><span class="kw">mod </span>js {
+    <span class="comment">// You can define a struct to hold the data for the batched calls.
+    </span><span class="kw">struct </span>Buffer;
+
+    <span class="comment">// JS is a special constant that defines initialization javascript. It can be used to set up the js environment and define the code that wasm-bindgen binds to.
+    </span><span class="kw">const </span>JS: <span class="kw-2">&amp;</span>str = <span class="string">r#"
+        const text = ["hello"];
+
+        export function get(id) {
+            console.log("got", text[id]);
+            return text[id];
+        }
+    "#</span>;
+
+    <span class="comment">// extern blocks allow communicating with wasm-bindgen. The javascript linked is the JS constant above.
+    </span><span class="kw">extern </span><span class="string">"C" </span>{
+        <span class="attr">#[wasm_bindgen]
+        </span><span class="kw">fn </span>get(id: u32) -&gt; String;
+    }
+
+    <span class="comment">// valid number types are u8, u16, u32.
+    </span><span class="kw">fn </span>takes_numbers(n1: u8, n2: u16, n3: u32) {
+        <span class="comment">// this is the js code that is executed when takes_numbers is called.
+        // dollar signs around the arguments mark that the arguments are safe to inline (they only appear once).
+        // you can escape dollar signs with a backslash.
+        </span><span class="string">r#"console.log($n1$, $n2$, $n3$, "\$");"#
+    </span>}
+
+    <span class="comment">// valid string types are &amp;str&lt;u8&gt;, &amp;str&lt;u16&gt;, &amp;str&lt;u32&gt;.
+    // the generic parameter is the type of the length of the string. u32 is the default.
+    </span><span class="kw">fn </span>takes_strings(str1: <span class="kw-2">&amp;</span>str, str2: <span class="kw-2">&amp;</span>str&lt;u8&gt;) {
+        <span class="string">"console.log($str1$, $str2$);"
+    </span>}
+
+    <span class="comment">// you can also use the &amp;str&lt;SIZE, cache_name&gt; syntax to cache the string in a js variable.
+    // each cache has a name that can be reused throughout the bindings so that different functions can share the same cache.
+    // the cache has a size of 128 values.
+    // caches on static strings use the pointer to hash the string which is faster than hashing the string itself.
+    </span><span class="kw">fn </span>takes_cachable_strings(str1: <span class="kw-2">&amp;</span>str&lt;u8, cache1&gt;, str2: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&lt;u16, cache2&gt;) {
+        <span class="string">"console.log($str1$, $str2$);"
+    </span>}
+
+    <span class="comment">// Writable allows you to pass in any type that implements the Writable trait.
+    // Because all strings are encoded in a sequental buffer, every string needs to be copied to the new buffer.
+    // If you only create a single string from a Arguments&lt;'_&gt; or number, you can use the Writable trait to avoid allocting a string and then copying it.
+    // the generic parameter is the type of the length of the resulting string. u32 is the default.
+    </span><span class="kw">fn </span>takes_writable(writable: <span class="kw">impl </span>Writable&lt;u8&gt;) {
+        <span class="string">"console.log($writable$);"
+    </span>}
+
+    <span class="comment">// valid types are &amp;[u8], &amp;[u16], &amp;[u32].
+    // the generic parameter is the type of the length of the array. u32 is the default.
+    </span><span class="kw">fn </span>takes_slices(slice1: <span class="kw-2">&amp;</span>[u8], slice2: <span class="kw-2">&amp;</span>[u8&lt;u16&gt;]) {
+        <span class="string">"console.log($slice1$, $slice2$);"
+    </span>}
+}
+
+<span class="kw">let </span><span class="kw-2">mut </span>channel1 = Buffer::default();
+<span class="kw">let </span><span class="kw-2">mut </span>channel2 = Buffer::default();
+channel1.takes_strings(<span class="string">"hello"</span>, <span class="string">"world"</span>);
+channel1.takes_numbers(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>);
+channel1.takes_cachable_strings(<span class="string">"hello"</span>, <span class="string">"world"</span>);
+channel1.takes_cachable_strings(<span class="string">"hello"</span>, <span class="string">"world"</span>);
+channel1.takes_cachable_strings(<span class="string">"hello"</span>, <span class="string">"world"</span>);
+channel1.takes_writable(<span class="macro">format_args!</span>(<span class="string">"hello {}"</span>, <span class="string">"world"</span>));
+<span class="comment">// append can be used to append the calls from one channel to another.
+</span>channel2.append(channel1);
+channel2.takes_slices(<span class="kw-2">&amp;</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], <span class="kw-2">&amp;</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]);
+<span class="comment">// flush executes all the queued calls and clears the queue.
+</span>channel2.flush();
+<span class="macro">assert_eq!</span>(get(<span class="number">0</span>), <span class="string">"hello"</span>);</code></pre></div>
+</div></details></section></div></main></body></html>

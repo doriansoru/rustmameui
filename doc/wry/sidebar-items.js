@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DragDropEvent","Error","PageLoadEvent","ProxyConfig","Theme"],"fn":["webview_version"],"struct":["ProxyEndpoint","Rect","RequestAsyncResponder","WebContext","WebView","WebViewAttributes","WebViewBuilder"],"trait":["WebViewBuilderExtUnix","WebViewExtUnix"],"type":["RGBA","Result"]};

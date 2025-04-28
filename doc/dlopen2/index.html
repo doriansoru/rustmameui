@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Library for opening and working with dynamic link libraries (also known as shared object)."><title>dlopen2 - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="dlopen2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../dlopen2/index.html">dlopen2</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#quick-example" title="Quick example">Quick example</a></li><li><a href="#features" title="Features">Features</a><ul><li><a href="#main-features" title="Main features">Main features</a></li><li><a href="#comparison-with-other-libraries" title="Comparison with other libraries">Comparison with other libraries</a></li><li><a href="#safety" title="Safety">Safety</a></li></ul></li><li><a href="#usage" title="Usage:">Usage:</a></li><li><a href="#documentation" title="Documentation">Documentation</a></li><li><a href="#license" title="License">License</a></li><li><a href="#acknowledgement" title="Acknowledgement">Acknowledgement</a></li><li><a href="#comparison-of-apis" title="Comparison of APIs:">Comparison of APIs:</a></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#enums" title="Enums">Enums</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>dlopen2</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/dlopen2/lib.rs.html#1-138">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Library for opening and working with dynamic link libraries (also known as shared object).</p>
+<h2 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h2>
+<p>This library is an effort to make use of dynamic link libraries in Rust simple.
+Previously existing solutions were either unsafe, provided huge overhead of required writing too much code to achieve simple things.
+I hope that this library will help you to quickly get what you need and avoid errors.</p>
+<h2 id="quick-example"><a class="doc-anchor" href="#quick-example">§</a>Quick example</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::wrapper::{Container, WrapperApi};
+
+<span class="attr">#[derive(WrapperApi)]
+</span><span class="kw">struct </span>Api&lt;<span class="lifetime">'a</span>&gt; {
+    example_rust_fun: <span class="kw">fn</span>(arg: i32) -&gt; u32,
+    example_c_fun: <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(),
+    example_reference: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i32,
+    <span class="comment">// A function or field may not always exist in the library.
+    </span>example_c_fun_option: <span class="prelude-ty">Option</span>&lt;<span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>()&gt;,
+    example_reference_option: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>i32&gt;,
+}
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span><span class="kw-2">mut </span>cont: Container&lt;Api&gt; =
+        <span class="kw">unsafe </span>{ Container::load(<span class="string">"libexample.so"</span>) }.expect(<span class="string">"Could not open library or load symbols"</span>);
+    cont.example_rust_fun(<span class="number">5</span>);
+    <span class="kw">unsafe </span>{ cont.example_c_fun() };
+    <span class="kw-2">*</span>cont.example_reference_mut() = <span class="number">5</span>;
+
+    <span class="comment">// Optional functions return Some(result) if the function is present or None if absent.
+    </span><span class="kw">unsafe </span>{ cont.example_c_fun_option() };
+    <span class="comment">// Optional fields are Some(value) if present and None if absent.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(example_reference) = cont.example_reference_option() {
+        <span class="kw-2">*</span>example_reference = <span class="number">5</span>;
+    }
+}</code></pre></div>
+<h2 id="features"><a class="doc-anchor" href="#features">§</a>Features</h2><h3 id="main-features"><a class="doc-anchor" href="#main-features">§</a>Main features</h3>
+<ul>
+<li>Supports majority of platforms and is platform independent.</li>
+<li>Is consistent with Rust error handling mechanism and makes making mistakes much more difficult.</li>
+<li>Is very lightweight. It mostly uses zero cost wrappers to create safer abstractions over platform API.</li>
+<li>Is thread safe.</li>
+<li>Is object-oriented programming friendly.</li>
+<li>Has a low-level API that provides full flexibility of using libraries.</li>
+<li>Has two high-level APIs that protect against dangling symbols - each in its own way.</li>
+<li>High level APIs support automatic loading of symbols into structures. You only need to define a
+structure that represents an API. The rest happens automatically and requires only minimal amount of code.</li>
+<li>Automatic loading of symbols helps you to follow the DRY paradigm.</li>
+</ul>
+<h3 id="comparison-with-other-libraries"><a class="doc-anchor" href="#comparison-with-other-libraries">§</a>Comparison with other libraries</h3><div><table><thead><tr><th>Feature</th><th>dlopen2</th><th><a href="https://github.com/nagisa/rust_libloading">libloading</a></th><th><a href="https://github.com/Tyleo/sharedlib">sharedlib</a></th></tr></thead><tbody>
+<tr><td>Basic functionality</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Multiplatform</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Dangling symbol prevention</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Thread safety</td><td>Yes</td><td><strong>Potential problem with thread-safety of <code>dlerror()</code> on some platforms like FreeBSD</strong></td><td><strong>No support for SetErrorMode (library may block the application on Windows)</strong></td></tr>
+<tr><td>Loading of symbols into structures</td><td>Yes</td><td><strong>No</strong></td><td><strong>No</strong></td></tr>
+<tr><td>Overhead</td><td>Minimal</td><td>Minimal</td><td><strong>Some overhead</strong></td></tr>
+<tr><td>Low-level, unsafe API</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Object-oriented friendly</td><td>Yes</td><td><strong>No</strong></td><td>Yes</td></tr>
+<tr><td>Load from the program itself</td><td>Yes</td><td><strong>No</strong></td><td><strong>No</strong></td></tr>
+<tr><td>Obtaining address information (dladdr)</td><td>Yes</td><td><strong>Unix only</strong></td><td><strong>No</strong></td></tr>
+</tbody></table>
+</div><h3 id="safety-14"><a class="doc-anchor" href="#safety-14">§</a>Safety</h3>
+<p>Please note that while Rust aims at being 100% safe language, it does not yet provide mechanisms that would allow me to create a 100% safe library, so I had to settle on 99%.
+Also the nature of dynamic link libraries requires casting obtained pointers into types that are defined on the application side. And this cannot be safe.
+Having said that I still think that this library provides the best approach and greatest safety possible in Rust.</p>
+<h2 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage:</h2>
+<p>Cargo.toml:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+dlopen2 = &quot;0.6&quot;</code></pre></div><h2 id="documentation"><a class="doc-anchor" href="#documentation">§</a>Documentation</h2>
+<p><a href="https://docs.rs/dlopen2">Cargo documentation</a></p>
+<p><a href="../examples">Examples</a></p>
+<p><a href="https://github.com/OpenByteDev/dlopen2/releases">Changelog</a></p>
+<h2 id="license"><a class="doc-anchor" href="#license">§</a>License</h2>
+<p>This code is licensed under the <a href="../LICENSE">MIT</a> license.</p>
+<h2 id="acknowledgement"><a class="doc-anchor" href="#acknowledgement">§</a>Acknowledgement</h2>
+<p>Special thanks to <a href="https://github.com/nagisa">Simonas Kazlauskas</a> whose <a href="https://github.com/nagisa/rust_libloading">libloading</a> became code base for my project.</p>
+<h2 id="comparison-of-apis"><a class="doc-anchor" href="#comparison-of-apis">§</a>Comparison of APIs:</h2>
+<ul>
+<li>
+<p><a href="./raw/index.html"><strong>raw</strong></a> - a low-level API. It is mainly intended to give you full flexibility
+if you decide to create you own custom solution for handling dynamic link libraries.
+For typical operations you probably should use one of high-level APIs.</p>
+</li>
+<li>
+<p><a href="./symbor/index.html"><strong>symbor</strong></a> - a high-level API. It prevents dangling symbols by creating
+zero cost structural wrappers around symbols obtained from the library. These wrappers use
+Rust borrowing mechanism to make sure that the library will never get released before obtained
+symbols.</p>
+</li>
+<li>
+<p><a href="./wrapper/index.html"><strong>wrapper</strong></a> - a high-level API. It prevents dangling symbols by creating
+zero cost functional wrappers around symbols obtained from the library. These wrappers prevent
+accidental copying of raw symbols from library API. Dangling symbols are prevented by keeping
+library and its API in one structure - this makes sure that symbols and library are released
+together.</p>
+</li>
+</ul>
+<p>Additionally both high-level APIs provide a way to automatically load symbols into a structure using
+Rust reflection mechanism. Decision which API should be used is a matter of taste - please check
+documentation of both of them and use the one that you prefer.
+At the moment none seems to have any reasonable advantage over the other.</p>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="raw/index.html" title="mod dlopen2::raw">raw</a></dt><dd>Low-level API for opening and getting raw symbols from dynamic link libraries.</dd><dt><a class="mod" href="symbor/index.html" title="mod dlopen2::symbor">symbor</a></dt><dd>High-level and safe API for opening and getting symbols from dynamic libraries.
+It is based on symbol borrowing mechanism and supports automatic loading of symbols into structures.</dd><dt><a class="mod" href="utils/index.html" title="mod dlopen2::utils">utils</a></dt><dd>Utilities for working with dynamic link libraries.</dd><dt><a class="mod" href="wrapper/index.html" title="mod dlopen2::wrapper">wrapper</a></dt><dd>High-level and safe API for opening and getting symbols from dynamic link libraries.
+It is based on wrapping private symbols with public functions to prevent direct access
+and supports automatic loading of symbols into structures.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.Error.html" title="enum dlopen2::Error">Error</a></dt><dd>This is a library-specific error that is returned by all calls to all APIs.</dd></dl></section></div></main></body></html>

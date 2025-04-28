@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AssetOptions","ImageFormat","ImageSize"],"macro":["asset"],"struct":["Asset","BundledAsset","CssAssetOptions","FolderAssetOptions","ImageAssetOptions","JsAssetOptions"]};

@@ -1,0 +1,425 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/srbntt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/global-hotkey-0.5.5/src/platform_impl/x11/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="global_hotkey" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../../../static.files/storage-3a5871a4.js"></script><script defer src="../../../../static.files/src-script-b8d3f215.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">global_hotkey/platform_impl/x11/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// Copyright 2022-2022 Tauri Programme within The Commons Conservancy
+<a href=#2 id=2 data-nosnippet>2</a>// SPDX-License-Identifier: Apache-2.0
+<a href=#3 id=3 data-nosnippet>3</a>// SPDX-License-Identifier: MIT
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a></span><span class="kw">use </span>std::{collections::BTreeMap, ptr};
+<a href=#6 id=6 data-nosnippet>6</a>
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>crossbeam_channel::{unbounded, Receiver, Sender};
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>keyboard_types::{Code, Modifiers};
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>x11_dl::{
+<a href=#10 id=10 data-nosnippet>10</a>    keysym,
+<a href=#11 id=11 data-nosnippet>11</a>    xlib::{<span class="self">self</span>, Xlib, _XDisplay},
+<a href=#12 id=12 data-nosnippet>12</a>};
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use crate</span>::{hotkey::HotKey, GlobalHotKeyEvent};
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">enum </span>ThreadMessage {
+<a href=#17 id=17 data-nosnippet>17</a>    RegisterHotKey(HotKey, Sender&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;),
+<a href=#18 id=18 data-nosnippet>18</a>    RegisterHotKeys(Vec&lt;HotKey&gt;, Sender&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;),
+<a href=#19 id=19 data-nosnippet>19</a>    UnRegisterHotKey(HotKey, Sender&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;),
+<a href=#20 id=20 data-nosnippet>20</a>    UnRegisterHotKeys(Vec&lt;HotKey&gt;, Sender&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt;),
+<a href=#21 id=21 data-nosnippet>21</a>    DropThread,
+<a href=#22 id=22 data-nosnippet>22</a>}
+<a href=#23 id=23 data-nosnippet>23</a>
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">pub struct </span>GlobalHotKeyManager {
+<a href=#25 id=25 data-nosnippet>25</a>    thread_tx: Sender&lt;ThreadMessage&gt;,
+<a href=#26 id=26 data-nosnippet>26</a>}
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">impl </span>GlobalHotKeyManager {
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">pub fn </span>new() -&gt; <span class="kw">crate</span>::Result&lt;<span class="self">Self</span>&gt; {
+<a href=#30 id=30 data-nosnippet>30</a>        <span class="kw">let </span>(thread_tx, thread_rx) = unbounded();
+<a href=#31 id=31 data-nosnippet>31</a>        std::thread::spawn(|| events_processor(thread_rx));
+<a href=#32 id=32 data-nosnippet>32</a>        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ thread_tx })
+<a href=#33 id=33 data-nosnippet>33</a>    }
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="kw">pub fn </span>register(<span class="kw-2">&amp;</span><span class="self">self</span>, hotkey: HotKey) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#36 id=36 data-nosnippet>36</a>        <span class="kw">let </span>(tx, rx) = crossbeam_channel::bounded(<span class="number">1</span>);
+<a href=#37 id=37 data-nosnippet>37</a>        <span class="kw">let _ </span>= <span class="self">self
+<a href=#38 id=38 data-nosnippet>38</a>            </span>.thread_tx
+<a href=#39 id=39 data-nosnippet>39</a>            .send(ThreadMessage::RegisterHotKey(hotkey, tx));
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(result) = rx.recv() {
+<a href=#42 id=42 data-nosnippet>42</a>            result<span class="question-mark">?</span>;
+<a href=#43 id=43 data-nosnippet>43</a>        }
+<a href=#44 id=44 data-nosnippet>44</a>
+<a href=#45 id=45 data-nosnippet>45</a>        <span class="prelude-val">Ok</span>(())
+<a href=#46 id=46 data-nosnippet>46</a>    }
+<a href=#47 id=47 data-nosnippet>47</a>
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="kw">pub fn </span>unregister(<span class="kw-2">&amp;</span><span class="self">self</span>, hotkey: HotKey) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#49 id=49 data-nosnippet>49</a>        <span class="kw">let </span>(tx, rx) = crossbeam_channel::bounded(<span class="number">1</span>);
+<a href=#50 id=50 data-nosnippet>50</a>        <span class="kw">let _ </span>= <span class="self">self
+<a href=#51 id=51 data-nosnippet>51</a>            </span>.thread_tx
+<a href=#52 id=52 data-nosnippet>52</a>            .send(ThreadMessage::UnRegisterHotKey(hotkey, tx));
+<a href=#53 id=53 data-nosnippet>53</a>
+<a href=#54 id=54 data-nosnippet>54</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(result) = rx.recv() {
+<a href=#55 id=55 data-nosnippet>55</a>            result<span class="question-mark">?</span>;
+<a href=#56 id=56 data-nosnippet>56</a>        }
+<a href=#57 id=57 data-nosnippet>57</a>
+<a href=#58 id=58 data-nosnippet>58</a>        <span class="prelude-val">Ok</span>(())
+<a href=#59 id=59 data-nosnippet>59</a>    }
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">pub fn </span>register_all(<span class="kw-2">&amp;</span><span class="self">self</span>, hotkeys: <span class="kw-2">&amp;</span>[HotKey]) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#62 id=62 data-nosnippet>62</a>        <span class="kw">let </span>(tx, rx) = crossbeam_channel::bounded(<span class="number">1</span>);
+<a href=#63 id=63 data-nosnippet>63</a>        <span class="kw">let _ </span>= <span class="self">self
+<a href=#64 id=64 data-nosnippet>64</a>            </span>.thread_tx
+<a href=#65 id=65 data-nosnippet>65</a>            .send(ThreadMessage::RegisterHotKeys(hotkeys.to_vec(), tx));
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(result) = rx.recv() {
+<a href=#68 id=68 data-nosnippet>68</a>            result<span class="question-mark">?</span>;
+<a href=#69 id=69 data-nosnippet>69</a>        }
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a>        <span class="prelude-val">Ok</span>(())
+<a href=#72 id=72 data-nosnippet>72</a>    }
+<a href=#73 id=73 data-nosnippet>73</a>
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">pub fn </span>unregister_all(<span class="kw-2">&amp;</span><span class="self">self</span>, hotkeys: <span class="kw-2">&amp;</span>[HotKey]) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="kw">let </span>(tx, rx) = crossbeam_channel::bounded(<span class="number">1</span>);
+<a href=#76 id=76 data-nosnippet>76</a>        <span class="kw">let _ </span>= <span class="self">self
+<a href=#77 id=77 data-nosnippet>77</a>            </span>.thread_tx
+<a href=#78 id=78 data-nosnippet>78</a>            .send(ThreadMessage::UnRegisterHotKeys(hotkeys.to_vec(), tx));
+<a href=#79 id=79 data-nosnippet>79</a>
+<a href=#80 id=80 data-nosnippet>80</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(result) = rx.recv() {
+<a href=#81 id=81 data-nosnippet>81</a>            result<span class="question-mark">?</span>;
+<a href=#82 id=82 data-nosnippet>82</a>        }
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>        <span class="prelude-val">Ok</span>(())
+<a href=#85 id=85 data-nosnippet>85</a>    }
+<a href=#86 id=86 data-nosnippet>86</a>}
+<a href=#87 id=87 data-nosnippet>87</a>
+<a href=#88 id=88 data-nosnippet>88</a><span class="kw">impl </span>Drop <span class="kw">for </span>GlobalHotKeyManager {
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#90 id=90 data-nosnippet>90</a>        <span class="kw">let _ </span>= <span class="self">self</span>.thread_tx.send(ThreadMessage::DropThread);
+<a href=#91 id=91 data-nosnippet>91</a>    }
+<a href=#92 id=92 data-nosnippet>92</a>}
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a><span class="comment">// XGrabKey works only with the exact state (modifiers)
+<a href=#95 id=95 data-nosnippet>95</a>// and since X11 considers NumLock, ScrollLock and CapsLock a modifier when it is ON,
+<a href=#96 id=96 data-nosnippet>96</a>// we also need to register our shortcut combined with these extra modifiers as well
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="kw">const </span>IGNORED_MODS: [u32; <span class="number">4</span>] = [
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="number">0</span>,              <span class="comment">// modifier only
+<a href=#99 id=99 data-nosnippet>99</a>    </span>xlib::Mod2Mask, <span class="comment">// NumLock
+<a href=#100 id=100 data-nosnippet>100</a>    </span>xlib::LockMask, <span class="comment">// CapsLock
+<a href=#101 id=101 data-nosnippet>101</a>    </span>xlib::Mod2Mask | xlib::LockMask,
+<a href=#102 id=102 data-nosnippet>102</a>];
+<a href=#103 id=103 data-nosnippet>103</a>
+<a href=#104 id=104 data-nosnippet>104</a><span class="attr">#[inline]
+<a href=#105 id=105 data-nosnippet>105</a></span><span class="kw">fn </span>register_hotkey(
+<a href=#106 id=106 data-nosnippet>106</a>    xlib: <span class="kw-2">&amp;</span>Xlib,
+<a href=#107 id=107 data-nosnippet>107</a>    display: <span class="kw-2">*mut </span>_XDisplay,
+<a href=#108 id=108 data-nosnippet>108</a>    root: u64,
+<a href=#109 id=109 data-nosnippet>109</a>    hotkeys: <span class="kw-2">&amp;mut </span>BTreeMap&lt;u32, Vec&lt;(u32, u32, bool)&gt;&gt;,
+<a href=#110 id=110 data-nosnippet>110</a>    hotkey: HotKey,
+<a href=#111 id=111 data-nosnippet>111</a>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>(modifiers, key) = (
+<a href=#113 id=113 data-nosnippet>113</a>        modifiers_to_x11_mods(hotkey.mods),
+<a href=#114 id=114 data-nosnippet>114</a>        keycode_to_x11_scancode(hotkey.key),
+<a href=#115 id=115 data-nosnippet>115</a>    );
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = key {
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">let </span>keycode = <span class="kw">unsafe </span>{ (xlib.XKeysymToKeycode)(display, key <span class="kw">as _</span>) };
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>        <span class="kw">for </span>m <span class="kw">in </span>IGNORED_MODS {
+<a href=#121 id=121 data-nosnippet>121</a>            <span class="kw">let </span>result = <span class="kw">unsafe </span>{
+<a href=#122 id=122 data-nosnippet>122</a>                (xlib.XGrabKey)(
+<a href=#123 id=123 data-nosnippet>123</a>                    display,
+<a href=#124 id=124 data-nosnippet>124</a>                    keycode <span class="kw">as _</span>,
+<a href=#125 id=125 data-nosnippet>125</a>                    modifiers | m,
+<a href=#126 id=126 data-nosnippet>126</a>                    root,
+<a href=#127 id=127 data-nosnippet>127</a>                    <span class="number">0</span>,
+<a href=#128 id=128 data-nosnippet>128</a>                    xlib::GrabModeAsync,
+<a href=#129 id=129 data-nosnippet>129</a>                    xlib::GrabModeAsync,
+<a href=#130 id=130 data-nosnippet>130</a>                )
+<a href=#131 id=131 data-nosnippet>131</a>            };
+<a href=#132 id=132 data-nosnippet>132</a>
+<a href=#133 id=133 data-nosnippet>133</a>            <span class="kw">if </span>result == xlib::BadAccess <span class="kw">as _ </span>{
+<a href=#134 id=134 data-nosnippet>134</a>                <span class="kw">for </span>m <span class="kw">in </span>IGNORED_MODS {
+<a href=#135 id=135 data-nosnippet>135</a>                    <span class="kw">unsafe </span>{ (xlib.XUngrabKey)(display, keycode <span class="kw">as _</span>, modifiers | m, root) };
+<a href=#136 id=136 data-nosnippet>136</a>                }
+<a href=#137 id=137 data-nosnippet>137</a>
+<a href=#138 id=138 data-nosnippet>138</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="kw">crate</span>::Error::AlreadyRegistered(hotkey));
+<a href=#139 id=139 data-nosnippet>139</a>            }
+<a href=#140 id=140 data-nosnippet>140</a>        }
+<a href=#141 id=141 data-nosnippet>141</a>
+<a href=#142 id=142 data-nosnippet>142</a>        <span class="kw">let </span>entry = hotkeys.entry(keycode <span class="kw">as _</span>).or_default();
+<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">match </span>entry.iter().find(|e| e.<span class="number">1 </span>== modifiers) {
+<a href=#144 id=144 data-nosnippet>144</a>            <span class="prelude-val">None </span>=&gt; {
+<a href=#145 id=145 data-nosnippet>145</a>                entry.push((hotkey.id(), modifiers, <span class="bool-val">false</span>));
+<a href=#146 id=146 data-nosnippet>146</a>                <span class="prelude-val">Ok</span>(())
+<a href=#147 id=147 data-nosnippet>147</a>            }
+<a href=#148 id=148 data-nosnippet>148</a>            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(<span class="kw">crate</span>::Error::AlreadyRegistered(hotkey)),
+<a href=#149 id=149 data-nosnippet>149</a>        }
+<a href=#150 id=150 data-nosnippet>150</a>    } <span class="kw">else </span>{
+<a href=#151 id=151 data-nosnippet>151</a>        <span class="prelude-val">Err</span>(<span class="kw">crate</span>::Error::FailedToRegister(<span class="macro">format!</span>(
+<a href=#152 id=152 data-nosnippet>152</a>            <span class="string">"Unable to register accelerator (unknown scancode for this key: {})."</span>,
+<a href=#153 id=153 data-nosnippet>153</a>            hotkey.key
+<a href=#154 id=154 data-nosnippet>154</a>        )))
+<a href=#155 id=155 data-nosnippet>155</a>    }
+<a href=#156 id=156 data-nosnippet>156</a>}
+<a href=#157 id=157 data-nosnippet>157</a>
+<a href=#158 id=158 data-nosnippet>158</a><span class="attr">#[inline]
+<a href=#159 id=159 data-nosnippet>159</a></span><span class="kw">fn </span>unregister_hotkey(
+<a href=#160 id=160 data-nosnippet>160</a>    xlib: <span class="kw-2">&amp;</span>Xlib,
+<a href=#161 id=161 data-nosnippet>161</a>    display: <span class="kw-2">*mut </span>_XDisplay,
+<a href=#162 id=162 data-nosnippet>162</a>    root: u64,
+<a href=#163 id=163 data-nosnippet>163</a>    hotkeys: <span class="kw-2">&amp;mut </span>BTreeMap&lt;u32, Vec&lt;(u32, u32, bool)&gt;&gt;,
+<a href=#164 id=164 data-nosnippet>164</a>    hotkey: HotKey,
+<a href=#165 id=165 data-nosnippet>165</a>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="kw">let </span>(modifiers, key) = (
+<a href=#167 id=167 data-nosnippet>167</a>        modifiers_to_x11_mods(hotkey.mods),
+<a href=#168 id=168 data-nosnippet>168</a>        keycode_to_x11_scancode(hotkey.key),
+<a href=#169 id=169 data-nosnippet>169</a>    );
+<a href=#170 id=170 data-nosnippet>170</a>
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = key {
+<a href=#172 id=172 data-nosnippet>172</a>        <span class="kw">let </span>keycode = <span class="kw">unsafe </span>{ (xlib.XKeysymToKeycode)(display, key <span class="kw">as _</span>) };
+<a href=#173 id=173 data-nosnippet>173</a>
+<a href=#174 id=174 data-nosnippet>174</a>        <span class="kw">for </span>m <span class="kw">in </span>IGNORED_MODS {
+<a href=#175 id=175 data-nosnippet>175</a>            <span class="kw">unsafe </span>{ (xlib.XUngrabKey)(display, keycode <span class="kw">as _</span>, modifiers | m, root) };
+<a href=#176 id=176 data-nosnippet>176</a>        }
+<a href=#177 id=177 data-nosnippet>177</a>
+<a href=#178 id=178 data-nosnippet>178</a>        <span class="kw">let </span>entry = hotkeys.entry(keycode <span class="kw">as _</span>).or_default();
+<a href=#179 id=179 data-nosnippet>179</a>        entry.retain(|k| k.<span class="number">1 </span>!= modifiers);
+<a href=#180 id=180 data-nosnippet>180</a>        <span class="prelude-val">Ok</span>(())
+<a href=#181 id=181 data-nosnippet>181</a>    } <span class="kw">else </span>{
+<a href=#182 id=182 data-nosnippet>182</a>        <span class="prelude-val">Err</span>(<span class="kw">crate</span>::Error::FailedToUnRegister(hotkey))
+<a href=#183 id=183 data-nosnippet>183</a>    }
+<a href=#184 id=184 data-nosnippet>184</a>}
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a><span class="kw">fn </span>events_processor(thread_rx: Receiver&lt;ThreadMessage&gt;) {
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="comment">//                           key    id,  mods, pressed
+<a href=#188 id=188 data-nosnippet>188</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>hotkeys = BTreeMap::&lt;u32, Vec&lt;(u32, u32, bool)&gt;&gt;::new();
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(xlib) = xlib::Xlib::open() {
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="kw">unsafe </span>{
+<a href=#191 id=191 data-nosnippet>191</a>            <span class="kw">let </span>display = (xlib.XOpenDisplay)(ptr::null());
+<a href=#192 id=192 data-nosnippet>192</a>            <span class="kw">let </span>root = (xlib.XDefaultRootWindow)(display);
+<a href=#193 id=193 data-nosnippet>193</a>
+<a href=#194 id=194 data-nosnippet>194</a>            <span class="comment">// Only trigger key release at end of repeated keys
+<a href=#195 id=195 data-nosnippet>195</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>supported_rtrn: i32 = <span class="number">0</span>;
+<a href=#196 id=196 data-nosnippet>196</a>            (xlib.XkbSetDetectableAutoRepeat)(display, <span class="number">1</span>, <span class="kw-2">&amp;mut </span>supported_rtrn);
+<a href=#197 id=197 data-nosnippet>197</a>
+<a href=#198 id=198 data-nosnippet>198</a>            (xlib.XSelectInput)(display, root, xlib::KeyPressMask);
+<a href=#199 id=199 data-nosnippet>199</a>            <span class="kw">let </span><span class="kw-2">mut </span>event: xlib::XEvent = std::mem::zeroed();
+<a href=#200 id=200 data-nosnippet>200</a>
+<a href=#201 id=201 data-nosnippet>201</a>            <span class="kw">loop </span>{
+<a href=#202 id=202 data-nosnippet>202</a>                <span class="comment">// Always service all pending events to avoid a queue of events from building up.
+<a href=#203 id=203 data-nosnippet>203</a>                </span><span class="kw">while </span>(xlib.XPending)(display) &gt; <span class="number">0 </span>{
+<a href=#204 id=204 data-nosnippet>204</a>                    (xlib.XNextEvent)(display, <span class="kw-2">&amp;mut </span>event);
+<a href=#205 id=205 data-nosnippet>205</a>                    <span class="kw">match </span>event.get_type() {
+<a href=#206 id=206 data-nosnippet>206</a>                        e @ xlib::KeyPress | e @ xlib::KeyRelease =&gt; {
+<a href=#207 id=207 data-nosnippet>207</a>                            <span class="kw">let </span>keycode = event.key.keycode;
+<a href=#208 id=208 data-nosnippet>208</a>                            <span class="comment">// X11 sends masks for Lock keys also and we only care about the 4 below
+<a href=#209 id=209 data-nosnippet>209</a>                            </span><span class="kw">let </span>event_mods = event.key.state
+<a href=#210 id=210 data-nosnippet>210</a>                                &amp; (xlib::ControlMask
+<a href=#211 id=211 data-nosnippet>211</a>                                    | xlib::ShiftMask
+<a href=#212 id=212 data-nosnippet>212</a>                                    | xlib::Mod4Mask
+<a href=#213 id=213 data-nosnippet>213</a>                                    | xlib::Mod1Mask);
+<a href=#214 id=214 data-nosnippet>214</a>
+<a href=#215 id=215 data-nosnippet>215</a>                            <span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = hotkeys.get_mut(<span class="kw-2">&amp;</span>keycode) {
+<a href=#216 id=216 data-nosnippet>216</a>                                <span class="kw">match </span>e {
+<a href=#217 id=217 data-nosnippet>217</a>                                    xlib::KeyPress =&gt; {
+<a href=#218 id=218 data-nosnippet>218</a>                                        <span class="kw">for </span>(id, mods, pressed) <span class="kw">in </span>entry {
+<a href=#219 id=219 data-nosnippet>219</a>                                            <span class="kw">if </span>event_mods == <span class="kw-2">*</span>mods &amp;&amp; !<span class="kw-2">*</span>pressed {
+<a href=#220 id=220 data-nosnippet>220</a>                                                GlobalHotKeyEvent::send(GlobalHotKeyEvent {
+<a href=#221 id=221 data-nosnippet>221</a>                                                    id: <span class="kw-2">*</span>id,
+<a href=#222 id=222 data-nosnippet>222</a>                                                    state: <span class="kw">crate</span>::HotKeyState::Pressed,
+<a href=#223 id=223 data-nosnippet>223</a>                                                });
+<a href=#224 id=224 data-nosnippet>224</a>                                                <span class="kw-2">*</span>pressed = <span class="bool-val">true</span>;
+<a href=#225 id=225 data-nosnippet>225</a>                                            }
+<a href=#226 id=226 data-nosnippet>226</a>                                        }
+<a href=#227 id=227 data-nosnippet>227</a>                                    }
+<a href=#228 id=228 data-nosnippet>228</a>                                    xlib::KeyRelease =&gt; {
+<a href=#229 id=229 data-nosnippet>229</a>                                        <span class="kw">for </span>(id, <span class="kw">_</span>, pressed) <span class="kw">in </span>entry {
+<a href=#230 id=230 data-nosnippet>230</a>                                            <span class="kw">if </span><span class="kw-2">*</span>pressed {
+<a href=#231 id=231 data-nosnippet>231</a>                                                GlobalHotKeyEvent::send(GlobalHotKeyEvent {
+<a href=#232 id=232 data-nosnippet>232</a>                                                    id: <span class="kw-2">*</span>id,
+<a href=#233 id=233 data-nosnippet>233</a>                                                    state: <span class="kw">crate</span>::HotKeyState::Released,
+<a href=#234 id=234 data-nosnippet>234</a>                                                });
+<a href=#235 id=235 data-nosnippet>235</a>                                                <span class="kw-2">*</span>pressed = <span class="bool-val">false</span>;
+<a href=#236 id=236 data-nosnippet>236</a>                                            }
+<a href=#237 id=237 data-nosnippet>237</a>                                        }
+<a href=#238 id=238 data-nosnippet>238</a>                                    }
+<a href=#239 id=239 data-nosnippet>239</a>                                    <span class="kw">_ </span>=&gt; {}
+<a href=#240 id=240 data-nosnippet>240</a>                                }
+<a href=#241 id=241 data-nosnippet>241</a>                            }
+<a href=#242 id=242 data-nosnippet>242</a>                        }
+<a href=#243 id=243 data-nosnippet>243</a>                        <span class="kw">_ </span>=&gt; {}
+<a href=#244 id=244 data-nosnippet>244</a>                    }
+<a href=#245 id=245 data-nosnippet>245</a>                }
+<a href=#246 id=246 data-nosnippet>246</a>
+<a href=#247 id=247 data-nosnippet>247</a>                <span class="kw">if let </span><span class="prelude-val">Ok</span>(msg) = thread_rx.try_recv() {
+<a href=#248 id=248 data-nosnippet>248</a>                    <span class="kw">match </span>msg {
+<a href=#249 id=249 data-nosnippet>249</a>                        ThreadMessage::RegisterHotKey(hotkey, tx) =&gt; {
+<a href=#250 id=250 data-nosnippet>250</a>                            <span class="kw">let _ </span>= tx.send(register_hotkey(
+<a href=#251 id=251 data-nosnippet>251</a>                                <span class="kw-2">&amp;</span>xlib,
+<a href=#252 id=252 data-nosnippet>252</a>                                display,
+<a href=#253 id=253 data-nosnippet>253</a>                                root,
+<a href=#254 id=254 data-nosnippet>254</a>                                <span class="kw-2">&amp;mut </span>hotkeys,
+<a href=#255 id=255 data-nosnippet>255</a>                                hotkey,
+<a href=#256 id=256 data-nosnippet>256</a>                            ));
+<a href=#257 id=257 data-nosnippet>257</a>                        }
+<a href=#258 id=258 data-nosnippet>258</a>                        ThreadMessage::RegisterHotKeys(keys, tx) =&gt; {
+<a href=#259 id=259 data-nosnippet>259</a>                            <span class="kw">for </span>hotkey <span class="kw">in </span>keys {
+<a href=#260 id=260 data-nosnippet>260</a>                                <span class="kw">if let </span><span class="prelude-val">Err</span>(e) =
+<a href=#261 id=261 data-nosnippet>261</a>                                    register_hotkey(<span class="kw-2">&amp;</span>xlib, display, root, <span class="kw-2">&amp;mut </span>hotkeys, hotkey)
+<a href=#262 id=262 data-nosnippet>262</a>                                {
+<a href=#263 id=263 data-nosnippet>263</a>                                    <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(e));
+<a href=#264 id=264 data-nosnippet>264</a>                                }
+<a href=#265 id=265 data-nosnippet>265</a>                            }
+<a href=#266 id=266 data-nosnippet>266</a>                            <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Ok</span>(()));
+<a href=#267 id=267 data-nosnippet>267</a>                        }
+<a href=#268 id=268 data-nosnippet>268</a>                        ThreadMessage::UnRegisterHotKey(hotkey, tx) =&gt; {
+<a href=#269 id=269 data-nosnippet>269</a>                            <span class="kw">let _ </span>= tx.send(unregister_hotkey(
+<a href=#270 id=270 data-nosnippet>270</a>                                <span class="kw-2">&amp;</span>xlib,
+<a href=#271 id=271 data-nosnippet>271</a>                                display,
+<a href=#272 id=272 data-nosnippet>272</a>                                root,
+<a href=#273 id=273 data-nosnippet>273</a>                                <span class="kw-2">&amp;mut </span>hotkeys,
+<a href=#274 id=274 data-nosnippet>274</a>                                hotkey,
+<a href=#275 id=275 data-nosnippet>275</a>                            ));
+<a href=#276 id=276 data-nosnippet>276</a>                        }
+<a href=#277 id=277 data-nosnippet>277</a>                        ThreadMessage::UnRegisterHotKeys(keys, tx) =&gt; {
+<a href=#278 id=278 data-nosnippet>278</a>                            <span class="kw">for </span>hotkey <span class="kw">in </span>keys {
+<a href=#279 id=279 data-nosnippet>279</a>                                <span class="kw">if let </span><span class="prelude-val">Err</span>(e) =
+<a href=#280 id=280 data-nosnippet>280</a>                                    unregister_hotkey(<span class="kw-2">&amp;</span>xlib, display, root, <span class="kw-2">&amp;mut </span>hotkeys, hotkey)
+<a href=#281 id=281 data-nosnippet>281</a>                                {
+<a href=#282 id=282 data-nosnippet>282</a>                                    <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Err</span>(e));
+<a href=#283 id=283 data-nosnippet>283</a>                                }
+<a href=#284 id=284 data-nosnippet>284</a>                            }
+<a href=#285 id=285 data-nosnippet>285</a>                            <span class="kw">let _ </span>= tx.send(<span class="prelude-val">Ok</span>(()));
+<a href=#286 id=286 data-nosnippet>286</a>                        }
+<a href=#287 id=287 data-nosnippet>287</a>                        ThreadMessage::DropThread =&gt; {
+<a href=#288 id=288 data-nosnippet>288</a>                            (xlib.XCloseDisplay)(display);
+<a href=#289 id=289 data-nosnippet>289</a>                            <span class="kw">return</span>;
+<a href=#290 id=290 data-nosnippet>290</a>                        }
+<a href=#291 id=291 data-nosnippet>291</a>                    }
+<a href=#292 id=292 data-nosnippet>292</a>                }
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>                std::thread::sleep(std::time::Duration::from_millis(<span class="number">50</span>));
+<a href=#295 id=295 data-nosnippet>295</a>            }
+<a href=#296 id=296 data-nosnippet>296</a>        };
+<a href=#297 id=297 data-nosnippet>297</a>    } <span class="kw">else </span>{
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="attr">#[cfg(debug_assertions)]
+<a href=#299 id=299 data-nosnippet>299</a>        </span><span class="macro">eprintln!</span>(<span class="string">"Failed to open Xlib, maybe you are not running under X11? Other window systems on Linux are not supported by `global-hotkey` crate."</span>);
+<a href=#300 id=300 data-nosnippet>300</a>    }
+<a href=#301 id=301 data-nosnippet>301</a>}
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a><span class="kw">fn </span>keycode_to_x11_scancode(key: Code) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
+<a href=#304 id=304 data-nosnippet>304</a>    <span class="prelude-val">Some</span>(<span class="kw">match </span>key {
+<a href=#305 id=305 data-nosnippet>305</a>        Code::KeyA =&gt; keysym::XK_A,
+<a href=#306 id=306 data-nosnippet>306</a>        Code::KeyB =&gt; keysym::XK_B,
+<a href=#307 id=307 data-nosnippet>307</a>        Code::KeyC =&gt; keysym::XK_C,
+<a href=#308 id=308 data-nosnippet>308</a>        Code::KeyD =&gt; keysym::XK_D,
+<a href=#309 id=309 data-nosnippet>309</a>        Code::KeyE =&gt; keysym::XK_E,
+<a href=#310 id=310 data-nosnippet>310</a>        Code::KeyF =&gt; keysym::XK_F,
+<a href=#311 id=311 data-nosnippet>311</a>        Code::KeyG =&gt; keysym::XK_G,
+<a href=#312 id=312 data-nosnippet>312</a>        Code::KeyH =&gt; keysym::XK_H,
+<a href=#313 id=313 data-nosnippet>313</a>        Code::KeyI =&gt; keysym::XK_I,
+<a href=#314 id=314 data-nosnippet>314</a>        Code::KeyJ =&gt; keysym::XK_J,
+<a href=#315 id=315 data-nosnippet>315</a>        Code::KeyK =&gt; keysym::XK_K,
+<a href=#316 id=316 data-nosnippet>316</a>        Code::KeyL =&gt; keysym::XK_L,
+<a href=#317 id=317 data-nosnippet>317</a>        Code::KeyM =&gt; keysym::XK_M,
+<a href=#318 id=318 data-nosnippet>318</a>        Code::KeyN =&gt; keysym::XK_N,
+<a href=#319 id=319 data-nosnippet>319</a>        Code::KeyO =&gt; keysym::XK_O,
+<a href=#320 id=320 data-nosnippet>320</a>        Code::KeyP =&gt; keysym::XK_P,
+<a href=#321 id=321 data-nosnippet>321</a>        Code::KeyQ =&gt; keysym::XK_Q,
+<a href=#322 id=322 data-nosnippet>322</a>        Code::KeyR =&gt; keysym::XK_R,
+<a href=#323 id=323 data-nosnippet>323</a>        Code::KeyS =&gt; keysym::XK_S,
+<a href=#324 id=324 data-nosnippet>324</a>        Code::KeyT =&gt; keysym::XK_T,
+<a href=#325 id=325 data-nosnippet>325</a>        Code::KeyU =&gt; keysym::XK_U,
+<a href=#326 id=326 data-nosnippet>326</a>        Code::KeyV =&gt; keysym::XK_V,
+<a href=#327 id=327 data-nosnippet>327</a>        Code::KeyW =&gt; keysym::XK_W,
+<a href=#328 id=328 data-nosnippet>328</a>        Code::KeyX =&gt; keysym::XK_X,
+<a href=#329 id=329 data-nosnippet>329</a>        Code::KeyY =&gt; keysym::XK_Y,
+<a href=#330 id=330 data-nosnippet>330</a>        Code::KeyZ =&gt; keysym::XK_Z,
+<a href=#331 id=331 data-nosnippet>331</a>        Code::Backslash =&gt; keysym::XK_backslash,
+<a href=#332 id=332 data-nosnippet>332</a>        Code::BracketLeft =&gt; keysym::XK_bracketleft,
+<a href=#333 id=333 data-nosnippet>333</a>        Code::BracketRight =&gt; keysym::XK_bracketright,
+<a href=#334 id=334 data-nosnippet>334</a>        Code::Backquote =&gt; keysym::XK_quoteleft,
+<a href=#335 id=335 data-nosnippet>335</a>        Code::Comma =&gt; keysym::XK_comma,
+<a href=#336 id=336 data-nosnippet>336</a>        Code::Digit0 =&gt; keysym::XK_0,
+<a href=#337 id=337 data-nosnippet>337</a>        Code::Digit1 =&gt; keysym::XK_1,
+<a href=#338 id=338 data-nosnippet>338</a>        Code::Digit2 =&gt; keysym::XK_2,
+<a href=#339 id=339 data-nosnippet>339</a>        Code::Digit3 =&gt; keysym::XK_3,
+<a href=#340 id=340 data-nosnippet>340</a>        Code::Digit4 =&gt; keysym::XK_4,
+<a href=#341 id=341 data-nosnippet>341</a>        Code::Digit5 =&gt; keysym::XK_5,
+<a href=#342 id=342 data-nosnippet>342</a>        Code::Digit6 =&gt; keysym::XK_6,
+<a href=#343 id=343 data-nosnippet>343</a>        Code::Digit7 =&gt; keysym::XK_7,
+<a href=#344 id=344 data-nosnippet>344</a>        Code::Digit8 =&gt; keysym::XK_8,
+<a href=#345 id=345 data-nosnippet>345</a>        Code::Digit9 =&gt; keysym::XK_9,
+<a href=#346 id=346 data-nosnippet>346</a>        Code::Equal =&gt; keysym::XK_equal,
+<a href=#347 id=347 data-nosnippet>347</a>        Code::Minus =&gt; keysym::XK_minus,
+<a href=#348 id=348 data-nosnippet>348</a>        Code::Period =&gt; keysym::XK_period,
+<a href=#349 id=349 data-nosnippet>349</a>        Code::Quote =&gt; keysym::XK_leftsinglequotemark,
+<a href=#350 id=350 data-nosnippet>350</a>        Code::Semicolon =&gt; keysym::XK_semicolon,
+<a href=#351 id=351 data-nosnippet>351</a>        Code::Slash =&gt; keysym::XK_slash,
+<a href=#352 id=352 data-nosnippet>352</a>        Code::Backspace =&gt; keysym::XK_BackSpace,
+<a href=#353 id=353 data-nosnippet>353</a>        Code::CapsLock =&gt; keysym::XK_Caps_Lock,
+<a href=#354 id=354 data-nosnippet>354</a>        Code::Enter =&gt; keysym::XK_Return,
+<a href=#355 id=355 data-nosnippet>355</a>        Code::Space =&gt; keysym::XK_space,
+<a href=#356 id=356 data-nosnippet>356</a>        Code::Tab =&gt; keysym::XK_Tab,
+<a href=#357 id=357 data-nosnippet>357</a>        Code::Delete =&gt; keysym::XK_Delete,
+<a href=#358 id=358 data-nosnippet>358</a>        Code::End =&gt; keysym::XK_End,
+<a href=#359 id=359 data-nosnippet>359</a>        Code::Home =&gt; keysym::XK_Home,
+<a href=#360 id=360 data-nosnippet>360</a>        Code::Insert =&gt; keysym::XK_Insert,
+<a href=#361 id=361 data-nosnippet>361</a>        Code::PageDown =&gt; keysym::XK_Page_Down,
+<a href=#362 id=362 data-nosnippet>362</a>        Code::PageUp =&gt; keysym::XK_Page_Up,
+<a href=#363 id=363 data-nosnippet>363</a>        Code::ArrowDown =&gt; keysym::XK_Down,
+<a href=#364 id=364 data-nosnippet>364</a>        Code::ArrowLeft =&gt; keysym::XK_Left,
+<a href=#365 id=365 data-nosnippet>365</a>        Code::ArrowRight =&gt; keysym::XK_Right,
+<a href=#366 id=366 data-nosnippet>366</a>        Code::ArrowUp =&gt; keysym::XK_Up,
+<a href=#367 id=367 data-nosnippet>367</a>        Code::Numpad0 =&gt; keysym::XK_KP_0,
+<a href=#368 id=368 data-nosnippet>368</a>        Code::Numpad1 =&gt; keysym::XK_KP_1,
+<a href=#369 id=369 data-nosnippet>369</a>        Code::Numpad2 =&gt; keysym::XK_KP_2,
+<a href=#370 id=370 data-nosnippet>370</a>        Code::Numpad3 =&gt; keysym::XK_KP_3,
+<a href=#371 id=371 data-nosnippet>371</a>        Code::Numpad4 =&gt; keysym::XK_KP_4,
+<a href=#372 id=372 data-nosnippet>372</a>        Code::Numpad5 =&gt; keysym::XK_KP_5,
+<a href=#373 id=373 data-nosnippet>373</a>        Code::Numpad6 =&gt; keysym::XK_KP_6,
+<a href=#374 id=374 data-nosnippet>374</a>        Code::Numpad7 =&gt; keysym::XK_KP_7,
+<a href=#375 id=375 data-nosnippet>375</a>        Code::Numpad8 =&gt; keysym::XK_KP_8,
+<a href=#376 id=376 data-nosnippet>376</a>        Code::Numpad9 =&gt; keysym::XK_KP_9,
+<a href=#377 id=377 data-nosnippet>377</a>        Code::NumpadAdd =&gt; keysym::XK_KP_Add,
+<a href=#378 id=378 data-nosnippet>378</a>        Code::NumpadDecimal =&gt; keysym::XK_KP_Decimal,
+<a href=#379 id=379 data-nosnippet>379</a>        Code::NumpadDivide =&gt; keysym::XK_KP_Divide,
+<a href=#380 id=380 data-nosnippet>380</a>        Code::NumpadMultiply =&gt; keysym::XK_KP_Multiply,
+<a href=#381 id=381 data-nosnippet>381</a>        Code::NumpadSubtract =&gt; keysym::XK_KP_Subtract,
+<a href=#382 id=382 data-nosnippet>382</a>        Code::Escape =&gt; keysym::XK_Escape,
+<a href=#383 id=383 data-nosnippet>383</a>        Code::PrintScreen =&gt; keysym::XK_Print,
+<a href=#384 id=384 data-nosnippet>384</a>        Code::ScrollLock =&gt; keysym::XK_Scroll_Lock,
+<a href=#385 id=385 data-nosnippet>385</a>        Code::NumLock =&gt; keysym::XK_F1,
+<a href=#386 id=386 data-nosnippet>386</a>        Code::F1 =&gt; keysym::XK_F1,
+<a href=#387 id=387 data-nosnippet>387</a>        Code::F2 =&gt; keysym::XK_F2,
+<a href=#388 id=388 data-nosnippet>388</a>        Code::F3 =&gt; keysym::XK_F3,
+<a href=#389 id=389 data-nosnippet>389</a>        Code::F4 =&gt; keysym::XK_F4,
+<a href=#390 id=390 data-nosnippet>390</a>        Code::F5 =&gt; keysym::XK_F5,
+<a href=#391 id=391 data-nosnippet>391</a>        Code::F6 =&gt; keysym::XK_F6,
+<a href=#392 id=392 data-nosnippet>392</a>        Code::F7 =&gt; keysym::XK_F7,
+<a href=#393 id=393 data-nosnippet>393</a>        Code::F8 =&gt; keysym::XK_F8,
+<a href=#394 id=394 data-nosnippet>394</a>        Code::F9 =&gt; keysym::XK_F9,
+<a href=#395 id=395 data-nosnippet>395</a>        Code::F10 =&gt; keysym::XK_F10,
+<a href=#396 id=396 data-nosnippet>396</a>        Code::F11 =&gt; keysym::XK_F11,
+<a href=#397 id=397 data-nosnippet>397</a>        Code::F12 =&gt; keysym::XK_F12,
+<a href=#398 id=398 data-nosnippet>398</a>        Code::AudioVolumeDown =&gt; keysym::XF86XK_AudioLowerVolume,
+<a href=#399 id=399 data-nosnippet>399</a>        Code::AudioVolumeMute =&gt; keysym::XF86XK_AudioMute,
+<a href=#400 id=400 data-nosnippet>400</a>        Code::AudioVolumeUp =&gt; keysym::XF86XK_AudioRaiseVolume,
+<a href=#401 id=401 data-nosnippet>401</a>        Code::MediaPlay =&gt; keysym::XF86XK_AudioPlay,
+<a href=#402 id=402 data-nosnippet>402</a>        Code::MediaPause =&gt; keysym::XF86XK_AudioPause,
+<a href=#403 id=403 data-nosnippet>403</a>        Code::MediaStop =&gt; keysym::XF86XK_AudioStop,
+<a href=#404 id=404 data-nosnippet>404</a>        Code::MediaTrackNext =&gt; keysym::XF86XK_AudioNext,
+<a href=#405 id=405 data-nosnippet>405</a>        Code::MediaTrackPrevious =&gt; keysym::XF86XK_AudioPrev,
+<a href=#406 id=406 data-nosnippet>406</a>        <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+<a href=#407 id=407 data-nosnippet>407</a>    })
+<a href=#408 id=408 data-nosnippet>408</a>}
+<a href=#409 id=409 data-nosnippet>409</a>
+<a href=#410 id=410 data-nosnippet>410</a><span class="kw">fn </span>modifiers_to_x11_mods(modifiers: Modifiers) -&gt; u32 {
+<a href=#411 id=411 data-nosnippet>411</a>    <span class="kw">let </span><span class="kw-2">mut </span>x11mods = <span class="number">0</span>;
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="kw">if </span>modifiers.contains(Modifiers::SHIFT) {
+<a href=#413 id=413 data-nosnippet>413</a>        x11mods |= xlib::ShiftMask;
+<a href=#414 id=414 data-nosnippet>414</a>    }
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">if </span>modifiers.intersects(Modifiers::SUPER | Modifiers::META) {
+<a href=#416 id=416 data-nosnippet>416</a>        x11mods |= xlib::Mod4Mask;
+<a href=#417 id=417 data-nosnippet>417</a>    }
+<a href=#418 id=418 data-nosnippet>418</a>    <span class="kw">if </span>modifiers.contains(Modifiers::ALT) {
+<a href=#419 id=419 data-nosnippet>419</a>        x11mods |= xlib::Mod1Mask;
+<a href=#420 id=420 data-nosnippet>420</a>    }
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">if </span>modifiers.contains(Modifiers::CONTROL) {
+<a href=#422 id=422 data-nosnippet>422</a>        x11mods |= xlib::ControlMask;
+<a href=#423 id=423 data-nosnippet>423</a>    }
+<a href=#424 id=424 data-nosnippet>424</a>    x11mods
+<a href=#425 id=425 data-nosnippet>425</a>}</code></pre></div></section></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["Ok","launch"],"mod":["events","prelude"],"struct":["CapturedError","LaunchBuilder"],"type":["ContextFn","LaunchFn","Result"]};

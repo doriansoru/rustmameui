@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sledgehammer_utils", 0, "A pointer that is only used for hashing purposes\nReturns the argument unchanged.\nReturns the argument unchanged.\nReturns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")

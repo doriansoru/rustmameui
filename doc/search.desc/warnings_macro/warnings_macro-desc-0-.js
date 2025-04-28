@@ -1,0 +1,1 @@
+searchState.loadedDescShard("warnings_macro", 0, "Turns a function into a warning that is only called if the …")

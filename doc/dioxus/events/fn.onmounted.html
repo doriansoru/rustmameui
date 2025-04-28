@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The onmounted event is fired when the element is first added to the DOM. This event gives you a `MountedData` object and lets you interact with the raw DOM element."><title>onmounted in dioxus::events - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus/index.html">dioxus</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">onmounted</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#event-handlers" title="Event Handlers">Event Handlers</a><ul><li><a href="#event-lifetimes" title="Event Lifetimes">Event Lifetimes</a></li><li><a href="#async-event-handlers" title="Async Event Handlers">Async Event Handlers</a></li><li><a href="#compiler-errors-you-may-run-into-while-using-event-handlers" title="Compiler errors you may run into while using event handlers">Compiler errors you may run into while using event handlers</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus::<wbr>events</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus</a>::<wbr><a href="index.html">events</a></div><h1>Function <span class="fn">onmounted</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_html/events/mounted.rs.html#142-204">Source</a> </span></div><pre class="rust item-decl"><code>pub fn onmounted&lt;__Marker&gt;(
+    _f: impl <a class="trait" href="../prelude/trait.SuperInto.html" title="trait dioxus::prelude::SuperInto">SuperInto</a>&lt;<a class="struct" href="../prelude/struct.Callback.html" title="struct dioxus::prelude::Callback">Callback</a>&lt;<a class="struct" href="../prelude/struct.Event.html" title="struct dioxus::prelude::Event">Event</a>&lt;<a class="struct" href="struct.MountedData.html" title="struct dioxus::events::MountedData">MountedData</a>&gt;&gt;, __Marker&gt;,
+) -&gt; <a class="struct" href="../prelude/struct.Attribute.html" title="struct dioxus::prelude::Attribute">Attribute</a></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The onmounted event is fired when the element is first added to the DOM. This event gives you a <a href="struct.MountedData.html" title="struct dioxus::events::MountedData"><code>MountedData</code></a> object and lets you interact with the raw DOM element.</p>
+<p>This event is fired once per element. If you need to access the element multiple times, you can store the <a href="struct.MountedData.html" title="struct dioxus::events::MountedData"><code>MountedData</code></a> object in a [<code>use_signal</code>] hook and use it as needed.</p>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span><span class="kw-2">mut </span>header_element = use_signal(|| <span class="prelude-val">None</span>);
+
+    <span class="macro">rsx!</span> {
+        div {
+            h1 {
+                <span class="comment">// The onmounted event will run the first time the h1 element is mounted
+                </span>onmounted: <span class="kw">move </span>|element| header_element.set(<span class="prelude-val">Some</span>(element.data())),
+                <span class="string">"Scroll to top example"
+            </span>}
+
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">100 </span>{
+                div { <span class="string">"Item {i}" </span>}
+            }
+
+            button {
+                <span class="comment">// When you click the button, if the header element has been mounted, we scroll to that element
+                </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw">async move </span>{
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(header) = header_element.cloned() {
+                        <span class="kw">let _ </span>= header.scroll_to(ScrollBehavior::Smooth).<span class="kw">await</span>;
+                    }
+                },
+                <span class="string">"Scroll to top"
+            </span>}
+        }
+    }
+}</code></pre></div>
+<p>The <code>MountedData</code> struct contains cross platform APIs that work on the desktop, mobile, liveview and web platforms. For the web platform, you can also downcast the <code>MountedData</code> event to the <code>web-sys::Element</code> type for more web specific APIs:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        div {
+            id: <span class="string">"some-id"</span>,
+            onmounted: <span class="kw">move </span>|element| {
+                <span class="comment">// You can use the web_event trait to downcast the element to a web specific event. For the mounted event, this will be a web_sys::Element
+                </span><span class="kw">let </span>web_sys_element = element.as_web_event();
+                <span class="macro">assert_eq!</span>(web_sys_element.id(), <span class="string">"some-id"</span>);
+            }
+        }
+    }
+}</code></pre></div>
+<details open>
+<summary>General Event Handler Information</summary>
+<h2 id="event-handlers"><a class="doc-anchor" href="#event-handlers">§</a>Event Handlers</h2>
+<p>Event Handlers let you react to user input in your application. In Dioxus, event handlers accept a closure that is called when the event occurs:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// The `onclick` event accepts a closure with the signature `fn(Event)`
+            </span>onclick: |event_data| <span class="macro">println!</span>(<span class="string">"clicked! I got the event data: {event_data:?}"</span>),
+            <span class="string">"Click me"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="event-lifetimes"><a class="doc-anchor" href="#event-lifetimes">§</a>Event Lifetimes</h3>
+<p>Events take a closure with the <code>'static</code> lifetime. This means that the closure can only access data that either exists for the entire lifetime of the application, or data that you move into the closure.</p>
+<p>State in dioxus is <code>copy</code> which makes it very easy to move into <code>'static</code> closures like event handlers:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span><span class="kw-2">mut </span>count = use_signal(|| <span class="number">0</span>);
+
+<span class="macro">rsx!</span> {
+    button {
+        <span class="comment">// Since we added the `move` keyword, the closure will move the `count` signal into the closure
+        </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+            <span class="comment">// This will panic because the `count` signal is not in scope
+            </span>count.set(count() + <span class="number">1</span>);
+        },
+        <span class="string">"Click me"
+    </span>}
+};</code></pre></div>
+<p>If you need to access data that is not <code>Copy</code>, you may need to clone the data before you move it into the closure:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// String is not `Copy`
+</span><span class="kw">let </span>string = <span class="string">"hello world"</span>.to_string();
+
+<span class="macro">rsx!</span> {
+    button {
+        <span class="comment">// The string only has one owner. We could move it into this closure, but since we want to use the string in other closures later, we will clone it instead
+        </span>onclick: {
+            <span class="comment">// Clone the string in a new block
+            </span><span class="kw">let </span>string = string.clone();
+            <span class="comment">// Then move the cloned string into the closure
+            </span><span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string)
+        },
+        <span class="string">"Print hello world"
+    </span>}
+    button {
+        <span class="comment">// We don't use the string after this closure, so we can just move it into the closure directly
+        </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string),
+        <span class="string">"Print hello world again"
+    </span>}
+};</code></pre></div>
+<h3 id="async-event-handlers"><a class="doc-anchor" href="#async-event-handlers">§</a>Async Event Handlers</h3>
+<p>In addition to closures that return nothing, you can also use async closures to handle events. If you return an async block from an event handler, dioxus will automatically spawn it:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// The `onclick` event can also accept a closure that returns an async block
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw">async move </span>{
+                tokio::time::sleep(std::time::Duration::from_secs(<span class="number">1</span>)).<span class="kw">await</span>;
+                <span class="macro">println!</span>(<span class="string">"You clicked the button one second ago!"</span>);
+            },
+            <span class="string">"Click me"
+        </span>}
+    }
+}</code></pre></div>
+</details>
+<h3 id="compiler-errors-you-may-run-into-while-using-event-handlers"><a class="doc-anchor" href="#compiler-errors-you-may-run-into-while-using-event-handlers">§</a>Compiler errors you may run into while using event handlers</h3><details>
+<summary>function requires argument type to outlive `'static`</summary>
+<p>Event handler in Dioxus need only access data that can last for the entire lifetime of the application. That generally means data that is moved into the closure. <strong>If you get this error, you may have forgotten to add <code>move</code> to your closure.</strong></p>
+<p>Broken component:</p>
+
+<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// We return an Element which can last as long as the component is on the screen
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="comment">// Signals are `Copy` which makes them very easy to move into `'static` closures like event handlers
+    </span><span class="kw">let </span>state = use_signal(|| <span class="string">"hello world"</span>.to_string());
+
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// ❌ Without `move`, rust will try to borrow the `state` signal which fails because the state signal is dropped at the end of the function
+            </span>onclick: |<span class="kw">_</span>| {
+                <span class="macro">println!</span>(<span class="string">"You clicked the button! The state is: {state}"</span>);
+            },
+            <span class="string">"Click me"
+        </span>}
+    }
+    <span class="comment">// The state signal is dropped here, but the event handler still needs to access it
+</span>}</code></pre></div>
+<p>Fixed component:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>state = use_signal(|| <span class="string">"hello world"</span>.to_string());
+
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// ✅ The `move` keyword tells rust it can move the `state` signal into the closure. Since the closure owns the signal state, it can read it even after the function returns
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="macro">println!</span>(<span class="string">"You clicked the button! The state is: {state}"</span>);
+            },
+            <span class="string">"Click me"
+        </span>}
+    }
+}</code></pre></div>
+</details>
+<details>
+<summary>use of moved value: `your_value` value used here after move</summary>
+<p>Data in rust has a single owner. If you run into this error, you have likely tried to move data that isn’t <code>Copy</code> into two different closures. <strong>You can fix this issue by making your data <code>Copy</code> or calling <code>clone</code> on it before you move it into the closure.</strong></p>
+<p>Broken component:</p>
+
+<div class="example-wrap compile_fail"><a href="#" class="tooltip" title="This example deliberately fails to compile">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts a string which cannot be copied implicitly
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: String) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// ❌ We are moving the string into the onclick handler which means we can't access it elsewhere
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="macro">println!</span>(<span class="string">"{string}"</span>);
+            },
+            <span class="string">"Print hello world"
+        </span>}
+        button {
+            <span class="comment">// ❌ Since we already moved the string, we can't move it into the onclick handler again. This will cause a compiler error
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="macro">println!</span>(<span class="string">"{string}"</span>);
+            },
+            <span class="string">"Print hello world again"
+        </span>}
+    }
+}</code></pre></div>
+<p>You can fix this issue by either:</p>
+<ul>
+<li>Making your data <code>Copy</code> with <code>ReadOnlySignal</code>:</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts `ReadOnlySignal&lt;String&gt;` which implements `Copy`
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: ReadOnlySignal&lt;String&gt;) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// ✅ Because the `string` signal is `Copy`, we can copy it into the closure while still having access to it elsewhere
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string),
+            <span class="string">"Print hello world"
+        </span>}
+        button {
+            <span class="comment">// ✅ Since `string` is `Copy`, we can move it into the onclick handler again
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string),
+            <span class="string">"Print hello world again"
+        </span>}
+    }
+}</code></pre></div>
+<ul>
+<li>Calling <code>clone</code> on your data before you move it into the closure:</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// `MyComponent` accepts a string which doesn't implement `Copy`
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>MyComponent(string: String) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// ✅ The string only has one owner. We could move it into this closure, but since we want to use the string in other closures later, we will clone it instead
+            </span>onclick: {
+                <span class="comment">// Clone the string in a new block
+                </span><span class="kw">let </span>string = string.clone();
+                <span class="comment">// Then move the cloned string into the closure
+                </span><span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string)
+            },
+            <span class="string">"Print hello world"
+        </span>}
+        button {
+            <span class="comment">// ✅ We don't use the string after this closure, so we can just move it into the closure directly
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">println!</span>(<span class="string">"{}"</span>, string),
+            <span class="string">"Print hello world again"
+        </span>}
+    }
+}</code></pre></div>
+</details></div></details></section></div></main></body></html>

@@ -1,0 +1,1 @@
+searchState.loadedDescShard("dioxus_core_macro", 0, "dioxus-core-macro\nProps\nComponent\nThe rsx! macro makes it easy for developers to write …")

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","HotKeyState"],"mod":["hotkey"],"struct":["GlobalHotKeyEvent","GlobalHotKeyManager"],"type":["GlobalHotKeyEventReceiver","Result"]};

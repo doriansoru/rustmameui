@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Store a value between renders. The foundational hook for all other hooks."><title>use_hook in dioxus::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus/index.html">dioxus</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">use_<wbr>hook</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#example" title="Example">Example</a></li><li><a href="#custom-hook-example" title="Custom Hook Example">Custom Hook Example</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus</a>::<wbr><a href="index.html">prelude</a></div><h1>Function <span class="fn">use_hook</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_core/global_context.rs.html#301">Source</a> </span></div><pre class="rust item-decl"><code>pub fn use_hook&lt;State&gt;(initializer: impl <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/ops/function/trait.FnOnce.html" title="trait core::ops::function::FnOnce">FnOnce</a>() -&gt; State) -&gt; State<div class="where">where
+    State: <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> + 'static,</div></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Store a value between renders. The foundational hook for all other hooks.</p>
+<p>Accepts an <code>initializer</code> closure, which is run on the first use of the hook (typically the initial render).
+<code>use_hook</code> will return a clone of the value on every render.</p>
+<p>In order to clean up resources you would need to implement the <a href="https://doc.rust-lang.org/1.86.0/core/ops/drop/trait.Drop.html" title="trait core::ops::drop::Drop"><code>Drop</code></a> trait for an inner value stored in a RC or similar (Signals for instance),
+as these only drop their inner value once all references have been dropped, which only happens when the component is dropped.</p>
+<div class="warning">
+<p><code>use_hook</code> is not reactive. It just returns the value on every render. If you need state that will track changes, use <a href="dioxus::prelude::use_signal"><code>use_signal</code></a> instead.</p>
+<p>❌ Don’t use <code>use_hook</code> with <code>Rc&lt;RefCell&lt;T&gt;&gt;</code> for state. It will not update the UI and other hooks when the state changes.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::cell::RefCell;
+
+<span class="kw">pub fn </span>Comp() -&gt; Element {
+    <span class="kw">let </span>count = use_hook(|| Rc::new(RefCell::new(<span class="number">0</span>)));
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw-2">*</span>count.borrow_mut() += <span class="number">1</span>,
+            <span class="string">"{count.borrow()}"
+        </span>}
+    }
+}</code></pre></div>
+<p>✅ Use <code>use_signal</code> instead.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">pub fn </span>Comp() -&gt; Element {
+    <span class="kw">let </span><span class="kw-2">mut </span>count = use_signal(|| <span class="number">0</span>);
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| count += <span class="number">1</span>,
+            <span class="string">"{count}"
+        </span>}
+    }
+}</code></pre></div>
+</div>
+<h2 id="example"><a class="doc-anchor" href="#example">§</a>Example</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="comment">// prints a greeting on the initial render
+</span><span class="kw">pub fn </span>use_hello_world() {
+    use_hook(|| <span class="macro">println!</span>(<span class="string">"Hello, world!"</span>));
+}</code></pre></div>
+<h2 id="custom-hook-example"><a class="doc-anchor" href="#custom-hook-example">§</a>Custom Hook Example</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">pub struct </span>InnerCustomState(usize);
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>InnerCustomState {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>){
+        <span class="macro">println!</span>(<span class="string">"Component has been dropped."</span>);
+    }
+}
+
+<span class="attr">#[derive(Clone, Copy)]
+</span><span class="kw">pub struct </span>CustomState {
+    inner: Signal&lt;InnerCustomState&gt;
+}
+
+<span class="kw">pub fn </span>use_custom_state() -&gt; CustomState {
+    use_hook(|| CustomState {
+        inner: Signal::new(InnerCustomState(<span class="number">0</span>))
+    })
+}</code></pre></div>
+</div></details></section></div></main></body></html>

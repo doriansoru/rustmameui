@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sledgehammer_bindgen_macro", 0, "What is Sledgehammer Bindgen?\nGenerates bindings for batched calls to js functions. The …")

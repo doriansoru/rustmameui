@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BadIcon","CursorIcon","Fullscreen","ProgressState","ResizeDirection","Theme","UserAttentionType"],"struct":["Icon","ProgressBarState","Window","WindowAttributes","WindowBuilder","WindowId","WindowSizeConstraints"],"type":["RGBA"]};

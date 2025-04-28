@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PLATFORM_FILE_EXTENSION","PLATFORM_FILE_PREFIX"],"fn":["maybe_uninit_slice_assume_init_ref","maybe_uninit_uninit_array","platform_file_name"]};

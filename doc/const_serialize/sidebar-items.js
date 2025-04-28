@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"derive":["SerializeConst"],"enum":["Layout"],"fn":["deserialize_const_raw","serialize_const","serialize_eq"],"macro":["deserialize_const"],"struct":["ConstReadBuffer","ConstStr","ConstVec","EnumLayout","EnumVariant","ListLayout","PrimitiveLayout","StructFieldLayout","StructLayout"],"trait":["SerializeConst"]};

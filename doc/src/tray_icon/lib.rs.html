@@ -1,0 +1,661 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/srbntt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tray-icon-0.19.3/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="tray_icon" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="../../static.files/src-script-b8d3f215.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">tray_icon/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="comment">// Copyright 2022-2022 Tauri Programme within The Commons Conservancy
+<a href=#2 id=2 data-nosnippet>2</a>// SPDX-License-Identifier: Apache-2.0
+<a href=#3 id=3 data-nosnippet>3</a>// SPDX-License-Identifier: MIT
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a></span><span class="attr">#![allow(clippy::uninlined_format_args)]
+<a href=#6 id=6 data-nosnippet>6</a>
+<a href=#7 id=7 data-nosnippet>7</a></span><span class="doccomment">//! tray-icon lets you create tray icons for desktop applications.
+<a href=#8 id=8 data-nosnippet>8</a>//!
+<a href=#9 id=9 data-nosnippet>9</a>//! # Platforms supported:
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! - Windows
+<a href=#12 id=12 data-nosnippet>12</a>//! - macOS
+<a href=#13 id=13 data-nosnippet>13</a>//! - Linux (gtk Only)
+<a href=#14 id=14 data-nosnippet>14</a>//!
+<a href=#15 id=15 data-nosnippet>15</a>//! # Platform-specific notes:
+<a href=#16 id=16 data-nosnippet>16</a>//!
+<a href=#17 id=17 data-nosnippet>17</a>//! - On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn't need to be the main thread but you have to create the tray icon on the same thread as the event loop.
+<a href=#18 id=18 data-nosnippet>18</a>//! - On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on [`StartCause::Init`](https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init).
+<a href=#19 id=19 data-nosnippet>19</a>//!
+<a href=#20 id=20 data-nosnippet>20</a>//! # Dependencies (Linux Only)
+<a href=#21 id=21 data-nosnippet>21</a>//!
+<a href=#22 id=22 data-nosnippet>22</a>//! On Linux, `gtk`, `libxdo` is used to make the predfined `Copy`, `Cut`, `Paste` and `SelectAll` menu items work and `libappindicator` or `libayatnat-appindicator` are used to create the tray icon, so make sure to install them on your system.
+<a href=#23 id=23 data-nosnippet>23</a>//!
+<a href=#24 id=24 data-nosnippet>24</a>//! #### Arch Linux / Manjaro:
+<a href=#25 id=25 data-nosnippet>25</a>//!
+<a href=#26 id=26 data-nosnippet>26</a>//! ```sh
+<a href=#27 id=27 data-nosnippet>27</a>//! pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator
+<a href=#28 id=28 data-nosnippet>28</a>//! ```
+<a href=#29 id=29 data-nosnippet>29</a>//!
+<a href=#30 id=30 data-nosnippet>30</a>//! #### Debian / Ubuntu:
+<a href=#31 id=31 data-nosnippet>31</a>//!
+<a href=#32 id=32 data-nosnippet>32</a>//! ```sh
+<a href=#33 id=33 data-nosnippet>33</a>//! sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev
+<a href=#34 id=34 data-nosnippet>34</a>//! ```
+<a href=#35 id=35 data-nosnippet>35</a>//!
+<a href=#36 id=36 data-nosnippet>36</a>//! # Examples
+<a href=#37 id=37 data-nosnippet>37</a>//!
+<a href=#38 id=38 data-nosnippet>38</a>//! #### Create a tray icon without a menu.
+<a href=#39 id=39 data-nosnippet>39</a>//!
+<a href=#40 id=40 data-nosnippet>40</a>//! ```no_run
+<a href=#41 id=41 data-nosnippet>41</a>//! use tray_icon::{TrayIconBuilder, Icon};
+<a href=#42 id=42 data-nosnippet>42</a>//!
+<a href=#43 id=43 data-nosnippet>43</a>//! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
+<a href=#44 id=44 data-nosnippet>44</a>//! let tray_icon = TrayIconBuilder::new()
+<a href=#45 id=45 data-nosnippet>45</a>//!     .with_tooltip("system-tray - tray icon library!")
+<a href=#46 id=46 data-nosnippet>46</a>//!     .with_icon(icon)
+<a href=#47 id=47 data-nosnippet>47</a>//!     .build()
+<a href=#48 id=48 data-nosnippet>48</a>//!     .unwrap();
+<a href=#49 id=49 data-nosnippet>49</a>//! ```
+<a href=#50 id=50 data-nosnippet>50</a>//!
+<a href=#51 id=51 data-nosnippet>51</a>//! #### Create a tray icon with a menu.
+<a href=#52 id=52 data-nosnippet>52</a>//!
+<a href=#53 id=53 data-nosnippet>53</a>//! ```no_run
+<a href=#54 id=54 data-nosnippet>54</a>//! use tray_icon::{TrayIconBuilder, menu::Menu,Icon};
+<a href=#55 id=55 data-nosnippet>55</a>//!
+<a href=#56 id=56 data-nosnippet>56</a>//! # let icon = Icon::from_rgba(Vec::new(), 0, 0).unwrap();
+<a href=#57 id=57 data-nosnippet>57</a>//! let tray_menu = Menu::new();
+<a href=#58 id=58 data-nosnippet>58</a>//! let tray_icon = TrayIconBuilder::new()
+<a href=#59 id=59 data-nosnippet>59</a>//!     .with_menu(Box::new(tray_menu))
+<a href=#60 id=60 data-nosnippet>60</a>//!     .with_tooltip("system-tray - tray icon library!")
+<a href=#61 id=61 data-nosnippet>61</a>//!     .with_icon(icon)
+<a href=#62 id=62 data-nosnippet>62</a>//!     .build()
+<a href=#63 id=63 data-nosnippet>63</a>//!     .unwrap();
+<a href=#64 id=64 data-nosnippet>64</a>//! ```
+<a href=#65 id=65 data-nosnippet>65</a>//!
+<a href=#66 id=66 data-nosnippet>66</a>//! # Processing tray events
+<a href=#67 id=67 data-nosnippet>67</a>//!
+<a href=#68 id=68 data-nosnippet>68</a>//! You can use [`TrayIconEvent::receiver`] to get a reference to the [`TrayIconEventReceiver`]
+<a href=#69 id=69 data-nosnippet>69</a>//! which you can use to listen to events when a click happens on the tray icon
+<a href=#70 id=70 data-nosnippet>70</a>//! ```no_run
+<a href=#71 id=71 data-nosnippet>71</a>//! use tray_icon::TrayIconEvent;
+<a href=#72 id=72 data-nosnippet>72</a>//!
+<a href=#73 id=73 data-nosnippet>73</a>//! if let Ok(event) = TrayIconEvent::receiver().try_recv() {
+<a href=#74 id=74 data-nosnippet>74</a>//!     println!("{:?}", event);
+<a href=#75 id=75 data-nosnippet>75</a>//! }
+<a href=#76 id=76 data-nosnippet>76</a>//! ```
+<a href=#77 id=77 data-nosnippet>77</a>//!
+<a href=#78 id=78 data-nosnippet>78</a>//! You can also listen for the menu events using [`MenuEvent::receiver`](crate::menu::MenuEvent::receiver) to get events for the tray context menu.
+<a href=#79 id=79 data-nosnippet>79</a>//!
+<a href=#80 id=80 data-nosnippet>80</a>//! ```no_run
+<a href=#81 id=81 data-nosnippet>81</a>//! use tray_icon::{TrayIconEvent, menu::MenuEvent};
+<a href=#82 id=82 data-nosnippet>82</a>//!
+<a href=#83 id=83 data-nosnippet>83</a>//! if let Ok(event) = TrayIconEvent::receiver().try_recv() {
+<a href=#84 id=84 data-nosnippet>84</a>//!     println!("tray event: {:?}", event);
+<a href=#85 id=85 data-nosnippet>85</a>//! }
+<a href=#86 id=86 data-nosnippet>86</a>//!
+<a href=#87 id=87 data-nosnippet>87</a>//! if let Ok(event) = MenuEvent::receiver().try_recv() {
+<a href=#88 id=88 data-nosnippet>88</a>//!     println!("menu event: {:?}", event);
+<a href=#89 id=89 data-nosnippet>89</a>//! }
+<a href=#90 id=90 data-nosnippet>90</a>//! ```
+<a href=#91 id=91 data-nosnippet>91</a>//!
+<a href=#92 id=92 data-nosnippet>92</a>//! ### Note for [winit] or [tao] users:
+<a href=#93 id=93 data-nosnippet>93</a>//!
+<a href=#94 id=94 data-nosnippet>94</a>//! You should use [`TrayIconEvent::set_event_handler`] and forward
+<a href=#95 id=95 data-nosnippet>95</a>//! the tray icon events to the event loop by using [`EventLoopProxy`]
+<a href=#96 id=96 data-nosnippet>96</a>//! so that the event loop is awakened on each tray icon event.
+<a href=#97 id=97 data-nosnippet>97</a>//! Same can be done for menu events using [`MenuEvent::set_event_handler`].
+<a href=#98 id=98 data-nosnippet>98</a>//!
+<a href=#99 id=99 data-nosnippet>99</a>//! ```no_run
+<a href=#100 id=100 data-nosnippet>100</a>//! # use winit::event_loop::EventLoop;
+<a href=#101 id=101 data-nosnippet>101</a>//! enum UserEvent {
+<a href=#102 id=102 data-nosnippet>102</a>//!   TrayIconEvent(tray_icon::TrayIconEvent),
+<a href=#103 id=103 data-nosnippet>103</a>//!   MenuEvent(tray_icon::menu::MenuEvent)
+<a href=#104 id=104 data-nosnippet>104</a>//! }
+<a href=#105 id=105 data-nosnippet>105</a>//!
+<a href=#106 id=106 data-nosnippet>106</a>//! let event_loop = EventLoop::&lt;UserEvent&gt;::with_user_event().build().unwrap();
+<a href=#107 id=107 data-nosnippet>107</a>//!
+<a href=#108 id=108 data-nosnippet>108</a>//! let proxy = event_loop.create_proxy();
+<a href=#109 id=109 data-nosnippet>109</a>//! tray_icon::TrayIconEvent::set_event_handler(Some(move |event| {
+<a href=#110 id=110 data-nosnippet>110</a>//!     proxy.send_event(UserEvent::TrayIconEvent(event));
+<a href=#111 id=111 data-nosnippet>111</a>//! }));
+<a href=#112 id=112 data-nosnippet>112</a>//!
+<a href=#113 id=113 data-nosnippet>113</a>//! let proxy = event_loop.create_proxy();
+<a href=#114 id=114 data-nosnippet>114</a>//! tray_icon::menu::MenuEvent::set_event_handler(Some(move |event| {
+<a href=#115 id=115 data-nosnippet>115</a>//!     proxy.send_event(UserEvent::MenuEvent(event));
+<a href=#116 id=116 data-nosnippet>116</a>//! }));
+<a href=#117 id=117 data-nosnippet>117</a>//! ```
+<a href=#118 id=118 data-nosnippet>118</a>//!
+<a href=#119 id=119 data-nosnippet>119</a>//! [`EventLoopProxy`]: https://docs.rs/winit/latest/winit/event_loop/struct.EventLoopProxy.html
+<a href=#120 id=120 data-nosnippet>120</a>//! [winit]: https://docs.rs/winit
+<a href=#121 id=121 data-nosnippet>121</a>//! [tao]: https://docs.rs/tao
+<a href=#122 id=122 data-nosnippet>122</a>
+<a href=#123 id=123 data-nosnippet>123</a></span><span class="kw">use </span>std::{
+<a href=#124 id=124 data-nosnippet>124</a>    cell::RefCell,
+<a href=#125 id=125 data-nosnippet>125</a>    path::{Path, PathBuf},
+<a href=#126 id=126 data-nosnippet>126</a>    rc::Rc,
+<a href=#127 id=127 data-nosnippet>127</a>};
+<a href=#128 id=128 data-nosnippet>128</a>
+<a href=#129 id=129 data-nosnippet>129</a><span class="kw">use </span>counter::Counter;
+<a href=#130 id=130 data-nosnippet>130</a><span class="kw">use </span>crossbeam_channel::{unbounded, Receiver, Sender};
+<a href=#131 id=131 data-nosnippet>131</a><span class="kw">use </span>once_cell::sync::{Lazy, OnceCell};
+<a href=#132 id=132 data-nosnippet>132</a>
+<a href=#133 id=133 data-nosnippet>133</a><span class="kw">mod </span>counter;
+<a href=#134 id=134 data-nosnippet>134</a><span class="kw">mod </span>error;
+<a href=#135 id=135 data-nosnippet>135</a><span class="kw">mod </span>icon;
+<a href=#136 id=136 data-nosnippet>136</a><span class="kw">mod </span>platform_impl;
+<a href=#137 id=137 data-nosnippet>137</a><span class="kw">mod </span>tray_icon_id;
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a><span class="kw">pub use </span><span class="self">self</span>::error::<span class="kw-2">*</span>;
+<a href=#140 id=140 data-nosnippet>140</a><span class="kw">pub use </span><span class="self">self</span>::icon::{BadIcon, Icon};
+<a href=#141 id=141 data-nosnippet>141</a><span class="kw">pub use </span><span class="self">self</span>::tray_icon_id::TrayIconId;
+<a href=#142 id=142 data-nosnippet>142</a>
+<a href=#143 id=143 data-nosnippet>143</a><span class="doccomment">/// Re-export of [muda](::muda) crate and used for tray context menu.
+<a href=#144 id=144 data-nosnippet>144</a></span><span class="kw">pub mod </span>menu {
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">pub use </span>muda::<span class="kw-2">*</span>;
+<a href=#146 id=146 data-nosnippet>146</a>}
+<a href=#147 id=147 data-nosnippet>147</a><span class="kw">pub use </span>muda::dpi;
+<a href=#148 id=148 data-nosnippet>148</a>
+<a href=#149 id=149 data-nosnippet>149</a><span class="kw">static </span>COUNTER: Counter = Counter::new();
+<a href=#150 id=150 data-nosnippet>150</a>
+<a href=#151 id=151 data-nosnippet>151</a><span class="doccomment">/// Attributes to use when creating a tray icon.
+<a href=#152 id=152 data-nosnippet>152</a></span><span class="kw">pub struct </span>TrayIconAttributes {
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="doccomment">/// Tray icon tooltip
+<a href=#154 id=154 data-nosnippet>154</a>    ///
+<a href=#155 id=155 data-nosnippet>155</a>    /// ## Platform-specific:
+<a href=#156 id=156 data-nosnippet>156</a>    ///
+<a href=#157 id=157 data-nosnippet>157</a>    /// - **Linux:** Unsupported.
+<a href=#158 id=158 data-nosnippet>158</a>    </span><span class="kw">pub </span>tooltip: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#159 id=159 data-nosnippet>159</a>
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="doccomment">/// Tray menu
+<a href=#161 id=161 data-nosnippet>161</a>    ///
+<a href=#162 id=162 data-nosnippet>162</a>    /// ## Platform-specific:
+<a href=#163 id=163 data-nosnippet>163</a>    ///
+<a href=#164 id=164 data-nosnippet>164</a>    /// - **Linux**: once a menu is set, it cannot be removed.
+<a href=#165 id=165 data-nosnippet>165</a>    </span><span class="kw">pub </span>menu: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>menu::ContextMenu&gt;&gt;,
+<a href=#166 id=166 data-nosnippet>166</a>
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="doccomment">/// Tray icon
+<a href=#168 id=168 data-nosnippet>168</a>    ///
+<a href=#169 id=169 data-nosnippet>169</a>    /// ## Platform-specific:
+<a href=#170 id=170 data-nosnippet>170</a>    ///
+<a href=#171 id=171 data-nosnippet>171</a>    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+<a href=#172 id=172 data-nosnippet>172</a>    ///     Setting an empty [`Menu`](crate::menu::Menu) is enough.
+<a href=#173 id=173 data-nosnippet>173</a>    </span><span class="kw">pub </span>icon: <span class="prelude-ty">Option</span>&lt;Icon&gt;,
+<a href=#174 id=174 data-nosnippet>174</a>
+<a href=#175 id=175 data-nosnippet>175</a>    <span class="doccomment">/// Tray icon temp dir path. **Linux only**.
+<a href=#176 id=176 data-nosnippet>176</a>    </span><span class="kw">pub </span>temp_dir_path: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+<a href=#177 id=177 data-nosnippet>177</a>
+<a href=#178 id=178 data-nosnippet>178</a>    <span class="doccomment">/// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+<a href=#179 id=179 data-nosnippet>179</a>    </span><span class="kw">pub </span>icon_is_template: bool,
+<a href=#180 id=180 data-nosnippet>180</a>
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="doccomment">/// Whether to show the tray menu on left click or not, default is `true`. **macOS &amp; Windows only**.
+<a href=#182 id=182 data-nosnippet>182</a>    </span><span class="kw">pub </span>menu_on_left_click: bool,
+<a href=#183 id=183 data-nosnippet>183</a>
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="doccomment">/// Tray icon title.
+<a href=#185 id=185 data-nosnippet>185</a>    ///
+<a href=#186 id=186 data-nosnippet>186</a>    /// ## Platform-specific
+<a href=#187 id=187 data-nosnippet>187</a>    ///
+<a href=#188 id=188 data-nosnippet>188</a>    /// - **Linux:** The title will not be shown unless there is an icon
+<a href=#189 id=189 data-nosnippet>189</a>    ///   as well.  The title is useful for numerical and other frequently
+<a href=#190 id=190 data-nosnippet>190</a>    ///   updated information.  In general, it shouldn't be shown unless a
+<a href=#191 id=191 data-nosnippet>191</a>    ///   user requests it as it can take up a significant amount of space
+<a href=#192 id=192 data-nosnippet>192</a>    ///   on the user's panel.  This may not be shown in all visualizations.
+<a href=#193 id=193 data-nosnippet>193</a>    /// - **Windows:** Unsupported.
+<a href=#194 id=194 data-nosnippet>194</a>    </span><span class="kw">pub </span>title: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#195 id=195 data-nosnippet>195</a>}
+<a href=#196 id=196 data-nosnippet>196</a>
+<a href=#197 id=197 data-nosnippet>197</a><span class="kw">impl </span>Default <span class="kw">for </span>TrayIconAttributes {
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#199 id=199 data-nosnippet>199</a>        <span class="self">Self </span>{
+<a href=#200 id=200 data-nosnippet>200</a>            tooltip: <span class="prelude-val">None</span>,
+<a href=#201 id=201 data-nosnippet>201</a>            menu: <span class="prelude-val">None</span>,
+<a href=#202 id=202 data-nosnippet>202</a>            icon: <span class="prelude-val">None</span>,
+<a href=#203 id=203 data-nosnippet>203</a>            temp_dir_path: <span class="prelude-val">None</span>,
+<a href=#204 id=204 data-nosnippet>204</a>            icon_is_template: <span class="bool-val">false</span>,
+<a href=#205 id=205 data-nosnippet>205</a>            menu_on_left_click: <span class="bool-val">true</span>,
+<a href=#206 id=206 data-nosnippet>206</a>            title: <span class="prelude-val">None</span>,
+<a href=#207 id=207 data-nosnippet>207</a>        }
+<a href=#208 id=208 data-nosnippet>208</a>    }
+<a href=#209 id=209 data-nosnippet>209</a>}
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a><span class="doccomment">/// [`TrayIcon`] builder struct and associated methods.
+<a href=#212 id=212 data-nosnippet>212</a></span><span class="attr">#[derive(Default)]
+<a href=#213 id=213 data-nosnippet>213</a></span><span class="kw">pub struct </span>TrayIconBuilder {
+<a href=#214 id=214 data-nosnippet>214</a>    id: TrayIconId,
+<a href=#215 id=215 data-nosnippet>215</a>    attrs: TrayIconAttributes,
+<a href=#216 id=216 data-nosnippet>216</a>}
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a><span class="kw">impl </span>TrayIconBuilder {
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="doccomment">/// Creates a new [`TrayIconBuilder`] with default [`TrayIconAttributes`].
+<a href=#220 id=220 data-nosnippet>220</a>    ///
+<a href=#221 id=221 data-nosnippet>221</a>    /// See [`TrayIcon::new`] for more info.
+<a href=#222 id=222 data-nosnippet>222</a>    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="self">Self </span>{
+<a href=#224 id=224 data-nosnippet>224</a>            id: TrayIconId(COUNTER.next().to_string()),
+<a href=#225 id=225 data-nosnippet>225</a>            attrs: TrayIconAttributes::default(),
+<a href=#226 id=226 data-nosnippet>226</a>        }
+<a href=#227 id=227 data-nosnippet>227</a>    }
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>    <span class="doccomment">/// Sets the unique id to build the tray icon with.
+<a href=#230 id=230 data-nosnippet>230</a>    </span><span class="kw">pub fn </span>with_id&lt;I: Into&lt;TrayIconId&gt;&gt;(<span class="kw-2">mut </span><span class="self">self</span>, id: I) -&gt; <span class="self">Self </span>{
+<a href=#231 id=231 data-nosnippet>231</a>        <span class="self">self</span>.id = id.into();
+<a href=#232 id=232 data-nosnippet>232</a>        <span class="self">self
+<a href=#233 id=233 data-nosnippet>233</a>    </span>}
+<a href=#234 id=234 data-nosnippet>234</a>
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="doccomment">/// Set the a menu for this tray icon.
+<a href=#236 id=236 data-nosnippet>236</a>    ///
+<a href=#237 id=237 data-nosnippet>237</a>    /// ## Platform-specific:
+<a href=#238 id=238 data-nosnippet>238</a>    ///
+<a href=#239 id=239 data-nosnippet>239</a>    /// - **Linux**: once a menu is set, it cannot be removed or replaced but you can change its content.
+<a href=#240 id=240 data-nosnippet>240</a>    </span><span class="kw">pub fn </span>with_menu(<span class="kw-2">mut </span><span class="self">self</span>, menu: Box&lt;<span class="kw">dyn </span>menu::ContextMenu&gt;) -&gt; <span class="self">Self </span>{
+<a href=#241 id=241 data-nosnippet>241</a>        <span class="self">self</span>.attrs.menu = <span class="prelude-val">Some</span>(menu);
+<a href=#242 id=242 data-nosnippet>242</a>        <span class="self">self
+<a href=#243 id=243 data-nosnippet>243</a>    </span>}
+<a href=#244 id=244 data-nosnippet>244</a>
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="doccomment">/// Set an icon for this tray icon.
+<a href=#246 id=246 data-nosnippet>246</a>    ///
+<a href=#247 id=247 data-nosnippet>247</a>    /// ## Platform-specific:
+<a href=#248 id=248 data-nosnippet>248</a>    ///
+<a href=#249 id=249 data-nosnippet>249</a>    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+<a href=#250 id=250 data-nosnippet>250</a>    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+<a href=#251 id=251 data-nosnippet>251</a>    </span><span class="kw">pub fn </span>with_icon(<span class="kw-2">mut </span><span class="self">self</span>, icon: Icon) -&gt; <span class="self">Self </span>{
+<a href=#252 id=252 data-nosnippet>252</a>        <span class="self">self</span>.attrs.icon = <span class="prelude-val">Some</span>(icon);
+<a href=#253 id=253 data-nosnippet>253</a>        <span class="self">self
+<a href=#254 id=254 data-nosnippet>254</a>    </span>}
+<a href=#255 id=255 data-nosnippet>255</a>
+<a href=#256 id=256 data-nosnippet>256</a>    <span class="doccomment">/// Set a tooltip for this tray icon.
+<a href=#257 id=257 data-nosnippet>257</a>    ///
+<a href=#258 id=258 data-nosnippet>258</a>    /// ## Platform-specific:
+<a href=#259 id=259 data-nosnippet>259</a>    ///
+<a href=#260 id=260 data-nosnippet>260</a>    /// - **Linux:** Unsupported.
+<a href=#261 id=261 data-nosnippet>261</a>    </span><span class="kw">pub fn </span>with_tooltip&lt;S: AsRef&lt;str&gt;&gt;(<span class="kw-2">mut </span><span class="self">self</span>, s: S) -&gt; <span class="self">Self </span>{
+<a href=#262 id=262 data-nosnippet>262</a>        <span class="self">self</span>.attrs.tooltip = <span class="prelude-val">Some</span>(s.as_ref().to_string());
+<a href=#263 id=263 data-nosnippet>263</a>        <span class="self">self
+<a href=#264 id=264 data-nosnippet>264</a>    </span>}
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="doccomment">/// Set the tray icon title.
+<a href=#267 id=267 data-nosnippet>267</a>    ///
+<a href=#268 id=268 data-nosnippet>268</a>    /// ## Platform-specific
+<a href=#269 id=269 data-nosnippet>269</a>    ///
+<a href=#270 id=270 data-nosnippet>270</a>    /// - **Linux:** The title will not be shown unless there is an icon
+<a href=#271 id=271 data-nosnippet>271</a>    ///   as well.  The title is useful for numerical and other frequently
+<a href=#272 id=272 data-nosnippet>272</a>    ///   updated information.  In general, it shouldn't be shown unless a
+<a href=#273 id=273 data-nosnippet>273</a>    ///   user requests it as it can take up a significant amount of space
+<a href=#274 id=274 data-nosnippet>274</a>    ///   on the user's panel.  This may not be shown in all visualizations.
+<a href=#275 id=275 data-nosnippet>275</a>    /// - **Windows:** Unsupported.
+<a href=#276 id=276 data-nosnippet>276</a>    </span><span class="kw">pub fn </span>with_title&lt;S: AsRef&lt;str&gt;&gt;(<span class="kw-2">mut </span><span class="self">self</span>, title: S) -&gt; <span class="self">Self </span>{
+<a href=#277 id=277 data-nosnippet>277</a>        <span class="self">self</span>.attrs.title.replace(title.as_ref().to_string());
+<a href=#278 id=278 data-nosnippet>278</a>        <span class="self">self
+<a href=#279 id=279 data-nosnippet>279</a>    </span>}
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="doccomment">/// Set tray icon temp dir path. **Linux only**.
+<a href=#282 id=282 data-nosnippet>282</a>    ///
+<a href=#283 id=283 data-nosnippet>283</a>    /// On Linux, we need to write the icon to the disk and usually it will
+<a href=#284 id=284 data-nosnippet>284</a>    /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
+<a href=#285 id=285 data-nosnippet>285</a>    </span><span class="kw">pub fn </span>with_temp_dir_path&lt;P: AsRef&lt;Path&gt;&gt;(<span class="kw-2">mut </span><span class="self">self</span>, s: P) -&gt; <span class="self">Self </span>{
+<a href=#286 id=286 data-nosnippet>286</a>        <span class="self">self</span>.attrs.temp_dir_path = <span class="prelude-val">Some</span>(s.as_ref().to_path_buf());
+<a href=#287 id=287 data-nosnippet>287</a>        <span class="self">self
+<a href=#288 id=288 data-nosnippet>288</a>    </span>}
+<a href=#289 id=289 data-nosnippet>289</a>
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="doccomment">/// Use the icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+<a href=#291 id=291 data-nosnippet>291</a>    </span><span class="kw">pub fn </span>with_icon_as_template(<span class="kw-2">mut </span><span class="self">self</span>, is_template: bool) -&gt; <span class="self">Self </span>{
+<a href=#292 id=292 data-nosnippet>292</a>        <span class="self">self</span>.attrs.icon_is_template = is_template;
+<a href=#293 id=293 data-nosnippet>293</a>        <span class="self">self
+<a href=#294 id=294 data-nosnippet>294</a>    </span>}
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>    <span class="doccomment">/// Whether to show the tray menu on left click or not, default is `true`. **macOS only**.
+<a href=#297 id=297 data-nosnippet>297</a>    </span><span class="kw">pub fn </span>with_menu_on_left_click(<span class="kw-2">mut </span><span class="self">self</span>, enable: bool) -&gt; <span class="self">Self </span>{
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="self">self</span>.attrs.menu_on_left_click = enable;
+<a href=#299 id=299 data-nosnippet>299</a>        <span class="self">self
+<a href=#300 id=300 data-nosnippet>300</a>    </span>}
+<a href=#301 id=301 data-nosnippet>301</a>
+<a href=#302 id=302 data-nosnippet>302</a>    <span class="doccomment">/// Access the unique id that will be assigned to the tray icon
+<a href=#303 id=303 data-nosnippet>303</a>    /// this builder will create.
+<a href=#304 id=304 data-nosnippet>304</a>    </span><span class="kw">pub fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>TrayIconId {
+<a href=#305 id=305 data-nosnippet>305</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.id
+<a href=#306 id=306 data-nosnippet>306</a>    }
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="doccomment">/// Builds and adds a new [`TrayIcon`] to the system tray.
+<a href=#309 id=309 data-nosnippet>309</a>    </span><span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;TrayIcon&gt; {
+<a href=#310 id=310 data-nosnippet>310</a>        TrayIcon::with_id(<span class="self">self</span>.id, <span class="self">self</span>.attrs)
+<a href=#311 id=311 data-nosnippet>311</a>    }
+<a href=#312 id=312 data-nosnippet>312</a>}
+<a href=#313 id=313 data-nosnippet>313</a>
+<a href=#314 id=314 data-nosnippet>314</a><span class="doccomment">/// Tray icon struct and associated methods.
+<a href=#315 id=315 data-nosnippet>315</a>///
+<a href=#316 id=316 data-nosnippet>316</a>/// This type is reference-counted and the icon is removed when the last instance is dropped.
+<a href=#317 id=317 data-nosnippet>317</a></span><span class="attr">#[derive(Clone)]
+<a href=#318 id=318 data-nosnippet>318</a></span><span class="kw">pub struct </span>TrayIcon {
+<a href=#319 id=319 data-nosnippet>319</a>    id: TrayIconId,
+<a href=#320 id=320 data-nosnippet>320</a>    tray: Rc&lt;RefCell&lt;platform_impl::TrayIcon&gt;&gt;,
+<a href=#321 id=321 data-nosnippet>321</a>}
+<a href=#322 id=322 data-nosnippet>322</a>
+<a href=#323 id=323 data-nosnippet>323</a><span class="kw">impl </span>TrayIcon {
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="doccomment">/// Builds and adds a new tray icon to the system tray.
+<a href=#325 id=325 data-nosnippet>325</a>    ///
+<a href=#326 id=326 data-nosnippet>326</a>    /// ## Platform-specific:
+<a href=#327 id=327 data-nosnippet>327</a>    ///
+<a href=#328 id=328 data-nosnippet>328</a>    /// - **Linux:** Sometimes the icon won't be visible unless a menu is set.
+<a href=#329 id=329 data-nosnippet>329</a>    ///   Setting an empty [`Menu`](crate::menu::Menu) is enough.
+<a href=#330 id=330 data-nosnippet>330</a>    </span><span class="kw">pub fn </span>new(attrs: TrayIconAttributes) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#331 id=331 data-nosnippet>331</a>        <span class="kw">let </span>id = TrayIconId(COUNTER.next().to_string());
+<a href=#332 id=332 data-nosnippet>332</a>        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+<a href=#333 id=333 data-nosnippet>333</a>            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
+<a href=#334 id=334 data-nosnippet>334</a>                id.clone(),
+<a href=#335 id=335 data-nosnippet>335</a>                attrs,
+<a href=#336 id=336 data-nosnippet>336</a>            )<span class="question-mark">?</span>)),
+<a href=#337 id=337 data-nosnippet>337</a>            id,
+<a href=#338 id=338 data-nosnippet>338</a>        })
+<a href=#339 id=339 data-nosnippet>339</a>    }
+<a href=#340 id=340 data-nosnippet>340</a>
+<a href=#341 id=341 data-nosnippet>341</a>    <span class="doccomment">/// Builds and adds a new tray icon to the system tray with the specified Id.
+<a href=#342 id=342 data-nosnippet>342</a>    ///
+<a href=#343 id=343 data-nosnippet>343</a>    /// See [`TrayIcon::new`] for more info.
+<a href=#344 id=344 data-nosnippet>344</a>    </span><span class="kw">pub fn </span>with_id&lt;I: Into&lt;TrayIconId&gt;&gt;(id: I, attrs: TrayIconAttributes) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>id = id.into();
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+<a href=#347 id=347 data-nosnippet>347</a>            tray: Rc::new(RefCell::new(platform_impl::TrayIcon::new(
+<a href=#348 id=348 data-nosnippet>348</a>                id.clone(),
+<a href=#349 id=349 data-nosnippet>349</a>                attrs,
+<a href=#350 id=350 data-nosnippet>350</a>            )<span class="question-mark">?</span>)),
+<a href=#351 id=351 data-nosnippet>351</a>            id,
+<a href=#352 id=352 data-nosnippet>352</a>        })
+<a href=#353 id=353 data-nosnippet>353</a>    }
+<a href=#354 id=354 data-nosnippet>354</a>
+<a href=#355 id=355 data-nosnippet>355</a>    <span class="doccomment">/// Returns the id associated with this tray icon.
+<a href=#356 id=356 data-nosnippet>356</a>    </span><span class="kw">pub fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>TrayIconId {
+<a href=#357 id=357 data-nosnippet>357</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.id
+<a href=#358 id=358 data-nosnippet>358</a>    }
+<a href=#359 id=359 data-nosnippet>359</a>
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="doccomment">/// Set new tray icon. If `None` is provided, it will remove the icon.
+<a href=#361 id=361 data-nosnippet>361</a>    </span><span class="kw">pub fn </span>set_icon(<span class="kw-2">&amp;</span><span class="self">self</span>, icon: <span class="prelude-ty">Option</span>&lt;Icon&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#362 id=362 data-nosnippet>362</a>        <span class="self">self</span>.tray.borrow_mut().set_icon(icon)
+<a href=#363 id=363 data-nosnippet>363</a>    }
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a>    <span class="doccomment">/// Set new tray menu.
+<a href=#366 id=366 data-nosnippet>366</a>    ///
+<a href=#367 id=367 data-nosnippet>367</a>    /// ## Platform-specific:
+<a href=#368 id=368 data-nosnippet>368</a>    ///
+<a href=#369 id=369 data-nosnippet>369</a>    /// - **Linux**: once a menu is set it cannot be removed so `None` has no effect
+<a href=#370 id=370 data-nosnippet>370</a>    </span><span class="kw">pub fn </span>set_menu(<span class="kw-2">&amp;</span><span class="self">self</span>, menu: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>menu::ContextMenu&gt;&gt;) {
+<a href=#371 id=371 data-nosnippet>371</a>        <span class="self">self</span>.tray.borrow_mut().set_menu(menu)
+<a href=#372 id=372 data-nosnippet>372</a>    }
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="doccomment">/// Sets the tooltip for this tray icon.
+<a href=#375 id=375 data-nosnippet>375</a>    ///
+<a href=#376 id=376 data-nosnippet>376</a>    /// ## Platform-specific:
+<a href=#377 id=377 data-nosnippet>377</a>    ///
+<a href=#378 id=378 data-nosnippet>378</a>    /// - **Linux:** Unsupported
+<a href=#379 id=379 data-nosnippet>379</a>    </span><span class="kw">pub fn </span>set_tooltip&lt;S: AsRef&lt;str&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, tooltip: <span class="prelude-ty">Option</span>&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="self">self</span>.tray.borrow_mut().set_tooltip(tooltip)
+<a href=#381 id=381 data-nosnippet>381</a>    }
+<a href=#382 id=382 data-nosnippet>382</a>
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="doccomment">/// Sets the tooltip for this tray icon.
+<a href=#384 id=384 data-nosnippet>384</a>    ///
+<a href=#385 id=385 data-nosnippet>385</a>    /// ## Platform-specific:
+<a href=#386 id=386 data-nosnippet>386</a>    ///
+<a href=#387 id=387 data-nosnippet>387</a>    /// - **Linux:** The title will not be shown unless there is an icon
+<a href=#388 id=388 data-nosnippet>388</a>    ///   as well.  The title is useful for numerical and other frequently
+<a href=#389 id=389 data-nosnippet>389</a>    ///   updated information.  In general, it shouldn't be shown unless a
+<a href=#390 id=390 data-nosnippet>390</a>    ///   user requests it as it can take up a significant amount of space
+<a href=#391 id=391 data-nosnippet>391</a>    ///   on the user's panel.  This may not be shown in all visualizations.
+<a href=#392 id=392 data-nosnippet>392</a>    /// - **Windows:** Unsupported
+<a href=#393 id=393 data-nosnippet>393</a>    </span><span class="kw">pub fn </span>set_title&lt;S: AsRef&lt;str&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, title: <span class="prelude-ty">Option</span>&lt;S&gt;) {
+<a href=#394 id=394 data-nosnippet>394</a>        <span class="self">self</span>.tray.borrow_mut().set_title(title)
+<a href=#395 id=395 data-nosnippet>395</a>    }
+<a href=#396 id=396 data-nosnippet>396</a>
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="doccomment">/// Show or hide this tray icon
+<a href=#398 id=398 data-nosnippet>398</a>    </span><span class="kw">pub fn </span>set_visible(<span class="kw-2">&amp;</span><span class="self">self</span>, visible: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#399 id=399 data-nosnippet>399</a>        <span class="self">self</span>.tray.borrow_mut().set_visible(visible)
+<a href=#400 id=400 data-nosnippet>400</a>    }
+<a href=#401 id=401 data-nosnippet>401</a>
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="doccomment">/// Sets the tray icon temp dir path. **Linux only**.
+<a href=#403 id=403 data-nosnippet>403</a>    ///
+<a href=#404 id=404 data-nosnippet>404</a>    /// On Linux, we need to write the icon to the disk and usually it will
+<a href=#405 id=405 data-nosnippet>405</a>    /// be `$XDG_RUNTIME_DIR/tray-icon` or `$TEMP/tray-icon`.
+<a href=#406 id=406 data-nosnippet>406</a>    </span><span class="kw">pub fn </span>set_temp_dir_path&lt;P: AsRef&lt;Path&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, path: <span class="prelude-ty">Option</span>&lt;P&gt;) {
+<a href=#407 id=407 data-nosnippet>407</a>        <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+<a href=#408 id=408 data-nosnippet>408</a>        </span><span class="self">self</span>.tray.borrow_mut().set_temp_dir_path(path);
+<a href=#409 id=409 data-nosnippet>409</a>        <span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
+<a href=#410 id=410 data-nosnippet>410</a>        </span><span class="kw">let _ </span>= path;
+<a href=#411 id=411 data-nosnippet>411</a>    }
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="doccomment">/// Set the current icon as a [template](https://developer.apple.com/documentation/appkit/nsimage/1520017-template?language=objc). **macOS only**.
+<a href=#414 id=414 data-nosnippet>414</a>    </span><span class="kw">pub fn </span>set_icon_as_template(<span class="kw-2">&amp;</span><span class="self">self</span>, is_template: bool) {
+<a href=#415 id=415 data-nosnippet>415</a>        <span class="attr">#[cfg(target_os = <span class="string">"macos"</span>)]
+<a href=#416 id=416 data-nosnippet>416</a>        </span><span class="self">self</span>.tray.borrow_mut().set_icon_as_template(is_template);
+<a href=#417 id=417 data-nosnippet>417</a>        <span class="attr">#[cfg(not(target_os = <span class="string">"macos"</span>))]
+<a href=#418 id=418 data-nosnippet>418</a>        </span><span class="kw">let _ </span>= is_template;
+<a href=#419 id=419 data-nosnippet>419</a>    }
+<a href=#420 id=420 data-nosnippet>420</a>
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">pub fn </span>set_icon_with_as_template(<span class="kw-2">&amp;</span><span class="self">self</span>, icon: <span class="prelude-ty">Option</span>&lt;Icon&gt;, is_template: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#422 id=422 data-nosnippet>422</a>        <span class="attr">#[cfg(target_os = <span class="string">"macos"</span>)]
+<a href=#423 id=423 data-nosnippet>423</a>        </span><span class="kw">return </span><span class="self">self
+<a href=#424 id=424 data-nosnippet>424</a>            </span>.tray
+<a href=#425 id=425 data-nosnippet>425</a>            .borrow_mut()
+<a href=#426 id=426 data-nosnippet>426</a>            .set_icon_with_as_template(icon, is_template);
+<a href=#427 id=427 data-nosnippet>427</a>        <span class="attr">#[cfg(not(target_os = <span class="string">"macos"</span>))]
+<a href=#428 id=428 data-nosnippet>428</a>        </span>{
+<a href=#429 id=429 data-nosnippet>429</a>            <span class="kw">let _ </span>= icon;
+<a href=#430 id=430 data-nosnippet>430</a>            <span class="kw">let _ </span>= is_template;
+<a href=#431 id=431 data-nosnippet>431</a>            <span class="prelude-val">Ok</span>(())
+<a href=#432 id=432 data-nosnippet>432</a>        }
+<a href=#433 id=433 data-nosnippet>433</a>    }
+<a href=#434 id=434 data-nosnippet>434</a>
+<a href=#435 id=435 data-nosnippet>435</a>    <span class="doccomment">/// Disable or enable showing the tray menu on left click.
+<a href=#436 id=436 data-nosnippet>436</a>    ///
+<a href=#437 id=437 data-nosnippet>437</a>    /// ## Platform-specific:
+<a href=#438 id=438 data-nosnippet>438</a>    ///
+<a href=#439 id=439 data-nosnippet>439</a>    /// - **Linux:** Unsupported.
+<a href=#440 id=440 data-nosnippet>440</a>    </span><span class="kw">pub fn </span>set_show_menu_on_left_click(<span class="kw-2">&amp;</span><span class="self">self</span>, enable: bool) {
+<a href=#441 id=441 data-nosnippet>441</a>        <span class="attr">#[cfg(any(target_os = <span class="string">"macos"</span>, target_os = <span class="string">"windows"</span>))]
+<a href=#442 id=442 data-nosnippet>442</a>        </span><span class="self">self</span>.tray.borrow_mut().set_show_menu_on_left_click(enable);
+<a href=#443 id=443 data-nosnippet>443</a>        <span class="attr">#[cfg(not(any(target_os = <span class="string">"macos"</span>, target_os = <span class="string">"windows"</span>)))]
+<a href=#444 id=444 data-nosnippet>444</a>        </span><span class="kw">let _ </span>= enable;
+<a href=#445 id=445 data-nosnippet>445</a>    }
+<a href=#446 id=446 data-nosnippet>446</a>
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="doccomment">/// Get tray icon rect.
+<a href=#448 id=448 data-nosnippet>448</a>    ///
+<a href=#449 id=449 data-nosnippet>449</a>    /// ## Platform-specific:
+<a href=#450 id=450 data-nosnippet>450</a>    ///
+<a href=#451 id=451 data-nosnippet>451</a>    /// - **Linux**: Unsupported.
+<a href=#452 id=452 data-nosnippet>452</a>    </span><span class="kw">pub fn </span>rect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Rect&gt; {
+<a href=#453 id=453 data-nosnippet>453</a>        <span class="self">self</span>.tray.borrow().rect()
+<a href=#454 id=454 data-nosnippet>454</a>    }
+<a href=#455 id=455 data-nosnippet>455</a>}
+<a href=#456 id=456 data-nosnippet>456</a>
+<a href=#457 id=457 data-nosnippet>457</a><span class="doccomment">/// Describes a tray icon event.
+<a href=#458 id=458 data-nosnippet>458</a>///
+<a href=#459 id=459 data-nosnippet>459</a>/// ## Platform-specific:
+<a href=#460 id=460 data-nosnippet>460</a>///
+<a href=#461 id=461 data-nosnippet>461</a>/// - **Linux**: Unsupported. The event is not emmited even though the icon is shown
+<a href=#462 id=462 data-nosnippet>462</a>///   and will still show a context menu on right click.
+<a href=#463 id=463 data-nosnippet>463</a></span><span class="attr">#[derive(Debug, Clone)]
+<a href=#464 id=464 data-nosnippet>464</a>#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
+<a href=#465 id=465 data-nosnippet>465</a>#[cfg_attr(feature = <span class="string">"serde"</span>, serde(tag = <span class="string">"type"</span>))]
+<a href=#466 id=466 data-nosnippet>466</a>#[non_exhaustive]
+<a href=#467 id=467 data-nosnippet>467</a></span><span class="kw">pub enum </span>TrayIconEvent {
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="doccomment">/// A click happened on the tray icon.
+<a href=#469 id=469 data-nosnippet>469</a>    </span><span class="attr">#[cfg_attr(feature = <span class="string">"serde"</span>, serde(rename_all = <span class="string">"camelCase"</span>))]
+<a href=#470 id=470 data-nosnippet>470</a>    </span>Click {
+<a href=#471 id=471 data-nosnippet>471</a>        <span class="doccomment">/// Id of the tray icon which triggered this event.
+<a href=#472 id=472 data-nosnippet>472</a>        </span>id: TrayIconId,
+<a href=#473 id=473 data-nosnippet>473</a>        <span class="doccomment">/// Physical Position of this event.
+<a href=#474 id=474 data-nosnippet>474</a>        </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#475 id=475 data-nosnippet>475</a>        <span class="doccomment">/// Position and size of the tray icon.
+<a href=#476 id=476 data-nosnippet>476</a>        </span>rect: Rect,
+<a href=#477 id=477 data-nosnippet>477</a>        <span class="doccomment">/// Mouse button that triggered this event.
+<a href=#478 id=478 data-nosnippet>478</a>        </span>button: MouseButton,
+<a href=#479 id=479 data-nosnippet>479</a>        <span class="doccomment">/// Mouse button state when this event was triggered.
+<a href=#480 id=480 data-nosnippet>480</a>        </span>button_state: MouseButtonState,
+<a href=#481 id=481 data-nosnippet>481</a>    },
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="doccomment">/// A double click happened on the tray icon. **Windows Only**
+<a href=#483 id=483 data-nosnippet>483</a>    </span>DoubleClick {
+<a href=#484 id=484 data-nosnippet>484</a>        <span class="doccomment">/// Id of the tray icon which triggered this event.
+<a href=#485 id=485 data-nosnippet>485</a>        </span>id: TrayIconId,
+<a href=#486 id=486 data-nosnippet>486</a>        <span class="doccomment">/// Physical Position of this event.
+<a href=#487 id=487 data-nosnippet>487</a>        </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#488 id=488 data-nosnippet>488</a>        <span class="doccomment">/// Position and size of the tray icon.
+<a href=#489 id=489 data-nosnippet>489</a>        </span>rect: Rect,
+<a href=#490 id=490 data-nosnippet>490</a>        <span class="doccomment">/// Mouse button that triggered this event.
+<a href=#491 id=491 data-nosnippet>491</a>        </span>button: MouseButton,
+<a href=#492 id=492 data-nosnippet>492</a>    },
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="doccomment">/// The mouse entered the tray icon region.
+<a href=#494 id=494 data-nosnippet>494</a>    </span>Enter {
+<a href=#495 id=495 data-nosnippet>495</a>        <span class="doccomment">/// Id of the tray icon which triggered this event.
+<a href=#496 id=496 data-nosnippet>496</a>        </span>id: TrayIconId,
+<a href=#497 id=497 data-nosnippet>497</a>        <span class="doccomment">/// Physical Position of this event.
+<a href=#498 id=498 data-nosnippet>498</a>        </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#499 id=499 data-nosnippet>499</a>        <span class="doccomment">/// Position and size of the tray icon.
+<a href=#500 id=500 data-nosnippet>500</a>        </span>rect: Rect,
+<a href=#501 id=501 data-nosnippet>501</a>    },
+<a href=#502 id=502 data-nosnippet>502</a>    <span class="doccomment">/// The mouse moved over the tray icon region.
+<a href=#503 id=503 data-nosnippet>503</a>    </span>Move {
+<a href=#504 id=504 data-nosnippet>504</a>        <span class="doccomment">/// Id of the tray icon which triggered this event.
+<a href=#505 id=505 data-nosnippet>505</a>        </span>id: TrayIconId,
+<a href=#506 id=506 data-nosnippet>506</a>        <span class="doccomment">/// Physical Position of this event.
+<a href=#507 id=507 data-nosnippet>507</a>        </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#508 id=508 data-nosnippet>508</a>        <span class="doccomment">/// Position and size of the tray icon.
+<a href=#509 id=509 data-nosnippet>509</a>        </span>rect: Rect,
+<a href=#510 id=510 data-nosnippet>510</a>    },
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="doccomment">/// The mouse left the tray icon region.
+<a href=#512 id=512 data-nosnippet>512</a>    </span>Leave {
+<a href=#513 id=513 data-nosnippet>513</a>        <span class="doccomment">/// Id of the tray icon which triggered this event.
+<a href=#514 id=514 data-nosnippet>514</a>        </span>id: TrayIconId,
+<a href=#515 id=515 data-nosnippet>515</a>        <span class="doccomment">/// Physical Position of this event.
+<a href=#516 id=516 data-nosnippet>516</a>        </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#517 id=517 data-nosnippet>517</a>        <span class="doccomment">/// Position and size of the tray icon.
+<a href=#518 id=518 data-nosnippet>518</a>        </span>rect: Rect,
+<a href=#519 id=519 data-nosnippet>519</a>    },
+<a href=#520 id=520 data-nosnippet>520</a>}
+<a href=#521 id=521 data-nosnippet>521</a>
+<a href=#522 id=522 data-nosnippet>522</a><span class="doccomment">/// Describes the mouse button state.
+<a href=#523 id=523 data-nosnippet>523</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+<a href=#524 id=524 data-nosnippet>524</a>#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
+<a href=#525 id=525 data-nosnippet>525</a></span><span class="kw">pub enum </span>MouseButtonState {
+<a href=#526 id=526 data-nosnippet>526</a>    Up,
+<a href=#527 id=527 data-nosnippet>527</a>    Down,
+<a href=#528 id=528 data-nosnippet>528</a>}
+<a href=#529 id=529 data-nosnippet>529</a>
+<a href=#530 id=530 data-nosnippet>530</a><span class="kw">impl </span>Default <span class="kw">for </span>MouseButtonState {
+<a href=#531 id=531 data-nosnippet>531</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#532 id=532 data-nosnippet>532</a>        <span class="self">Self</span>::Up
+<a href=#533 id=533 data-nosnippet>533</a>    }
+<a href=#534 id=534 data-nosnippet>534</a>}
+<a href=#535 id=535 data-nosnippet>535</a>
+<a href=#536 id=536 data-nosnippet>536</a><span class="doccomment">/// Describes which mouse button triggered the event..
+<a href=#537 id=537 data-nosnippet>537</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+<a href=#538 id=538 data-nosnippet>538</a>#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
+<a href=#539 id=539 data-nosnippet>539</a></span><span class="kw">pub enum </span>MouseButton {
+<a href=#540 id=540 data-nosnippet>540</a>    Left,
+<a href=#541 id=541 data-nosnippet>541</a>    Right,
+<a href=#542 id=542 data-nosnippet>542</a>    Middle,
+<a href=#543 id=543 data-nosnippet>543</a>}
+<a href=#544 id=544 data-nosnippet>544</a>
+<a href=#545 id=545 data-nosnippet>545</a><span class="kw">impl </span>Default <span class="kw">for </span>MouseButton {
+<a href=#546 id=546 data-nosnippet>546</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#547 id=547 data-nosnippet>547</a>        <span class="self">Self</span>::Left
+<a href=#548 id=548 data-nosnippet>548</a>    }
+<a href=#549 id=549 data-nosnippet>549</a>}
+<a href=#550 id=550 data-nosnippet>550</a>
+<a href=#551 id=551 data-nosnippet>551</a><span class="doccomment">/// Describes a rectangle including position (x - y axis) and size.
+<a href=#552 id=552 data-nosnippet>552</a></span><span class="attr">#[derive(Debug, PartialEq, Clone, Copy)]
+<a href=#553 id=553 data-nosnippet>553</a>#[cfg_attr(feature = <span class="string">"serde"</span>, derive(serde::Serialize, serde::Deserialize))]
+<a href=#554 id=554 data-nosnippet>554</a></span><span class="kw">pub struct </span>Rect {
+<a href=#555 id=555 data-nosnippet>555</a>    <span class="kw">pub </span>size: dpi::PhysicalSize&lt;u32&gt;,
+<a href=#556 id=556 data-nosnippet>556</a>    <span class="kw">pub </span>position: dpi::PhysicalPosition&lt;f64&gt;,
+<a href=#557 id=557 data-nosnippet>557</a>}
+<a href=#558 id=558 data-nosnippet>558</a>
+<a href=#559 id=559 data-nosnippet>559</a><span class="kw">impl </span>Default <span class="kw">for </span>Rect {
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#561 id=561 data-nosnippet>561</a>        <span class="self">Self </span>{
+<a href=#562 id=562 data-nosnippet>562</a>            size: dpi::PhysicalSize::new(<span class="number">0</span>, <span class="number">0</span>),
+<a href=#563 id=563 data-nosnippet>563</a>            position: dpi::PhysicalPosition::new(<span class="number">0.</span>, <span class="number">0.</span>),
+<a href=#564 id=564 data-nosnippet>564</a>        }
+<a href=#565 id=565 data-nosnippet>565</a>    }
+<a href=#566 id=566 data-nosnippet>566</a>}
+<a href=#567 id=567 data-nosnippet>567</a>
+<a href=#568 id=568 data-nosnippet>568</a><span class="doccomment">/// A reciever that could be used to listen to tray events.
+<a href=#569 id=569 data-nosnippet>569</a></span><span class="kw">pub type </span>TrayIconEventReceiver = Receiver&lt;TrayIconEvent&gt;;
+<a href=#570 id=570 data-nosnippet>570</a><span class="kw">type </span>TrayIconEventHandler = Box&lt;<span class="kw">dyn </span>Fn(TrayIconEvent) + Send + Sync + <span class="lifetime">'static</span>&gt;;
+<a href=#571 id=571 data-nosnippet>571</a>
+<a href=#572 id=572 data-nosnippet>572</a><span class="kw">static </span>TRAY_CHANNEL: Lazy&lt;(Sender&lt;TrayIconEvent&gt;, TrayIconEventReceiver)&gt; = Lazy::new(unbounded);
+<a href=#573 id=573 data-nosnippet>573</a><span class="kw">static </span>TRAY_EVENT_HANDLER: OnceCell&lt;<span class="prelude-ty">Option</span>&lt;TrayIconEventHandler&gt;&gt; = OnceCell::new();
+<a href=#574 id=574 data-nosnippet>574</a>
+<a href=#575 id=575 data-nosnippet>575</a><span class="kw">impl </span>TrayIconEvent {
+<a href=#576 id=576 data-nosnippet>576</a>    <span class="doccomment">/// Returns the id of the tray icon which triggered this event.
+<a href=#577 id=577 data-nosnippet>577</a>    </span><span class="kw">pub fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>TrayIconId {
+<a href=#578 id=578 data-nosnippet>578</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#579 id=579 data-nosnippet>579</a>            TrayIconEvent::Click { id, .. } =&gt; id,
+<a href=#580 id=580 data-nosnippet>580</a>            TrayIconEvent::DoubleClick { id, .. } =&gt; id,
+<a href=#581 id=581 data-nosnippet>581</a>            TrayIconEvent::Enter { id, .. } =&gt; id,
+<a href=#582 id=582 data-nosnippet>582</a>            TrayIconEvent::Move { id, .. } =&gt; id,
+<a href=#583 id=583 data-nosnippet>583</a>            TrayIconEvent::Leave { id, .. } =&gt; id,
+<a href=#584 id=584 data-nosnippet>584</a>        }
+<a href=#585 id=585 data-nosnippet>585</a>    }
+<a href=#586 id=586 data-nosnippet>586</a>
+<a href=#587 id=587 data-nosnippet>587</a>    <span class="doccomment">/// Gets a reference to the event channel's [`TrayIconEventReceiver`]
+<a href=#588 id=588 data-nosnippet>588</a>    /// which can be used to listen for tray events.
+<a href=#589 id=589 data-nosnippet>589</a>    ///
+<a href=#590 id=590 data-nosnippet>590</a>    /// ## Note
+<a href=#591 id=591 data-nosnippet>591</a>    ///
+<a href=#592 id=592 data-nosnippet>592</a>    /// This will not receive any events if [`TrayIconEvent::set_event_handler`] has been called with a `Some` value.
+<a href=#593 id=593 data-nosnippet>593</a>    </span><span class="kw">pub fn </span>receiver&lt;<span class="lifetime">'a</span>&gt;() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>TrayIconEventReceiver {
+<a href=#594 id=594 data-nosnippet>594</a>        <span class="kw-2">&amp;</span>TRAY_CHANNEL.<span class="number">1
+<a href=#595 id=595 data-nosnippet>595</a>    </span>}
+<a href=#596 id=596 data-nosnippet>596</a>
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="doccomment">/// Set a handler to be called for new events. Useful for implementing custom event sender.
+<a href=#598 id=598 data-nosnippet>598</a>    ///
+<a href=#599 id=599 data-nosnippet>599</a>    /// ## Note
+<a href=#600 id=600 data-nosnippet>600</a>    ///
+<a href=#601 id=601 data-nosnippet>601</a>    /// Calling this function with a `Some` value,
+<a href=#602 id=602 data-nosnippet>602</a>    /// will not send new events to the channel associated with [`TrayIconEvent::receiver`]
+<a href=#603 id=603 data-nosnippet>603</a>    </span><span class="kw">pub fn </span>set_event_handler&lt;F: Fn(TrayIconEvent) + Send + Sync + <span class="lifetime">'static</span>&gt;(f: <span class="prelude-ty">Option</span>&lt;F&gt;) {
+<a href=#604 id=604 data-nosnippet>604</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(f) = f {
+<a href=#605 id=605 data-nosnippet>605</a>            <span class="kw">let _ </span>= TRAY_EVENT_HANDLER.set(<span class="prelude-val">Some</span>(Box::new(f)));
+<a href=#606 id=606 data-nosnippet>606</a>        } <span class="kw">else </span>{
+<a href=#607 id=607 data-nosnippet>607</a>            <span class="kw">let _ </span>= TRAY_EVENT_HANDLER.set(<span class="prelude-val">None</span>);
+<a href=#608 id=608 data-nosnippet>608</a>        }
+<a href=#609 id=609 data-nosnippet>609</a>    }
+<a href=#610 id=610 data-nosnippet>610</a>
+<a href=#611 id=611 data-nosnippet>611</a>    <span class="attr">#[allow(unused)]
+<a href=#612 id=612 data-nosnippet>612</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>send(event: TrayIconEvent) {
+<a href=#613 id=613 data-nosnippet>613</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(handler) = TRAY_EVENT_HANDLER.get_or_init(|| <span class="prelude-val">None</span>) {
+<a href=#614 id=614 data-nosnippet>614</a>            handler(event);
+<a href=#615 id=615 data-nosnippet>615</a>        } <span class="kw">else </span>{
+<a href=#616 id=616 data-nosnippet>616</a>            <span class="kw">let _ </span>= TRAY_CHANNEL.<span class="number">0</span>.send(event);
+<a href=#617 id=617 data-nosnippet>617</a>        }
+<a href=#618 id=618 data-nosnippet>618</a>    }
+<a href=#619 id=619 data-nosnippet>619</a>}
+<a href=#620 id=620 data-nosnippet>620</a>
+<a href=#621 id=621 data-nosnippet>621</a><span class="attr">#[cfg(test)]
+<a href=#622 id=622 data-nosnippet>622</a></span><span class="kw">mod </span>tests {
+<a href=#623 id=623 data-nosnippet>623</a>
+<a href=#624 id=624 data-nosnippet>624</a>    <span class="attr">#[cfg(feature = <span class="string">"serde"</span>)]
+<a href=#625 id=625 data-nosnippet>625</a>    #[test]
+<a href=#626 id=626 data-nosnippet>626</a>    </span><span class="kw">fn </span>it_serializes() {
+<a href=#627 id=627 data-nosnippet>627</a>        <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#628 id=628 data-nosnippet>628</a>        <span class="kw">let </span>event = TrayIconEvent::Click {
+<a href=#629 id=629 data-nosnippet>629</a>            button: MouseButton::Left,
+<a href=#630 id=630 data-nosnippet>630</a>            button_state: MouseButtonState::Down,
+<a href=#631 id=631 data-nosnippet>631</a>            id: TrayIconId::new(<span class="string">"id"</span>),
+<a href=#632 id=632 data-nosnippet>632</a>            position: dpi::PhysicalPosition::default(),
+<a href=#633 id=633 data-nosnippet>633</a>            rect: Rect::default(),
+<a href=#634 id=634 data-nosnippet>634</a>        };
+<a href=#635 id=635 data-nosnippet>635</a>
+<a href=#636 id=636 data-nosnippet>636</a>        <span class="kw">let </span>value = serde_json::to_value(<span class="kw-2">&amp;</span>event).unwrap();
+<a href=#637 id=637 data-nosnippet>637</a>        <span class="macro">assert_eq!</span>(
+<a href=#638 id=638 data-nosnippet>638</a>            value,
+<a href=#639 id=639 data-nosnippet>639</a>            <span class="macro">serde_json::json!</span>({
+<a href=#640 id=640 data-nosnippet>640</a>                <span class="string">"type"</span>: <span class="string">"Click"</span>,
+<a href=#641 id=641 data-nosnippet>641</a>                <span class="string">"button"</span>: <span class="string">"Left"</span>,
+<a href=#642 id=642 data-nosnippet>642</a>                <span class="string">"buttonState"</span>: <span class="string">"Down"</span>,
+<a href=#643 id=643 data-nosnippet>643</a>                <span class="string">"id"</span>: <span class="string">"id"</span>,
+<a href=#644 id=644 data-nosnippet>644</a>                <span class="string">"position"</span>: {
+<a href=#645 id=645 data-nosnippet>645</a>                    <span class="string">"x"</span>: <span class="number">0.0</span>,
+<a href=#646 id=646 data-nosnippet>646</a>                    <span class="string">"y"</span>: <span class="number">0.0</span>,
+<a href=#647 id=647 data-nosnippet>647</a>                },
+<a href=#648 id=648 data-nosnippet>648</a>                <span class="string">"rect"</span>: {
+<a href=#649 id=649 data-nosnippet>649</a>                    <span class="string">"size"</span>: {
+<a href=#650 id=650 data-nosnippet>650</a>                        <span class="string">"width"</span>: <span class="number">0</span>,
+<a href=#651 id=651 data-nosnippet>651</a>                        <span class="string">"height"</span>: <span class="number">0</span>,
+<a href=#652 id=652 data-nosnippet>652</a>                    },
+<a href=#653 id=653 data-nosnippet>653</a>                    <span class="string">"position"</span>: {
+<a href=#654 id=654 data-nosnippet>654</a>                        <span class="string">"x"</span>: <span class="number">0.0</span>,
+<a href=#655 id=655 data-nosnippet>655</a>                        <span class="string">"y"</span>: <span class="number">0.0</span>,
+<a href=#656 id=656 data-nosnippet>656</a>                    },
+<a href=#657 id=657 data-nosnippet>657</a>                }
+<a href=#658 id=658 data-nosnippet>658</a>            })
+<a href=#659 id=659 data-nosnippet>659</a>        )
+<a href=#660 id=660 data-nosnippet>660</a>    }
+<a href=#661 id=661 data-nosnippet>661</a>}</code></pre></div></section></main></body></html>

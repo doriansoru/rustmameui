@@ -1,0 +1,1 @@
+searchState.loadedDescShard("manganis_macro", 0, "Manganis Macro\nThe asset macro collects assets that will be included in …")

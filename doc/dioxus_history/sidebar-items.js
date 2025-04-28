@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["history","provide_history_context"],"struct":["MemoryHistory"],"trait":["History"]};

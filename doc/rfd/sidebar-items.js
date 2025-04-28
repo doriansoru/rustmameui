@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["MessageButtons","MessageDialogResult","MessageLevel"],"struct":["AsyncFileDialog","AsyncMessageDialog","FileDialog","FileHandle","MessageDialog"]};

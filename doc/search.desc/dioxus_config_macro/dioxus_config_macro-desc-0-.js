@@ -1,0 +1,1 @@
+searchState.loadedDescShard("dioxus_config_macro", 0, "dioxus-config-macro")

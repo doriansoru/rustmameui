@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CMD_OR_CTRL"],"enum":["Code","HotKeyParseError"],"struct":["HotKey","Modifiers"]};

@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Props"><title>Props in dioxus::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc derive"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus/index.html">dioxus</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Props</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#props" title="Props">Props</a><ul><li><a href="#example" title="Example">Example</a></li><li><a href="#prop-modifiers" title="Prop Modifiers">Prop Modifiers</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus</a>::<wbr><a href="index.html">prelude</a></div><h1>Derive Macro <span class="derive">Props</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_core_macro/lib.rs.html#18">Source</a> </span></div><pre class="rust item-decl"><code>#[derive(Props)]
+{
+    <span class="comment">// Attributes available to this derive:</span>
+    #[props]
+}
+</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="props"><a class="doc-anchor" href="#props">§</a>Props</h2>
+<p>The props derive macro allows you to define what props your component accepts and how to accept those props. Every component must either accept no arguments or accept a single argument that implements the <code>Properties</code> trait.</p>
+<blockquote>
+<p>Note: You should generally prefer using the <code>#[component]</code> macro instead of the <code>#[derive(Props)]</code> macro with explicit props. The <code>#[component]</code> macro will automatically generate the props struct for you and perform extra checks to ensure that your component is valid.</p>
+</blockquote>
+<h3 id="example"><a class="doc-anchor" href="#example">§</a>Example</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="doccomment">/// The text of the button
+    </span>text: String,
+
+    <span class="doccomment">/// The color of the button
+    </span>color: String,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            color: props.color,
+            <span class="string">"{props.text}"
+        </span>}
+    }
+}
+
+<span class="macro">rsx!</span> {
+    <span class="comment">// Any fields you defined on the props struct will be turned into props for the component.
+    </span>Button {
+        text: <span class="string">"Click me!"</span>,
+        color: <span class="string">"red"</span>,
+    }
+};</code></pre></div>
+<h3 id="prop-modifiers"><a class="doc-anchor" href="#prop-modifiers">§</a>Prop Modifiers</h3>
+<p>You can use the <code>#[props()]</code> attribute to modify the behavior of the props derive macro:</p>
+<ul>
+<li><a href="#default-props"><code>#[props(default)]</code></a> - Makes the field optional in the component and uses the default value if it is not set when creating the component.</li>
+<li><a href="#optional-props"><code>#[props(!optional)]</code></a> - Makes a field with the type <code>Option&lt;T&gt;</code> required.</li>
+<li><a href="#converting-props"><code>#[props(into)]</code></a> - Converts a field into the correct type by using the [<code>Into</code>] trait.</li>
+<li><a href="#extending-elements"><code>#[props(extends = GlobalAttributes)]</code></a> - Extends the props with all the attributes from an element or the global element attributes.</li>
+</ul>
+<p>Props also act slightly differently when used with:</p>
+<ul>
+<li><a href="#optional-props"><code>Option&lt;T&gt;</code></a> - The field is automatically optional with a default value of <code>None</code>.</li>
+<li><a href="#reactive-props"><code>ReadOnlySignal&lt;T&gt;</code></a> - The props macro will automatically convert <code>T</code> into <code>ReadOnlySignal&lt;T&gt;</code> when it is passed as a prop.</li>
+<li><a href="#formatted-props"><code>String</code></a> - The props macro will accept formatted strings for any prop field with the type <code>String</code>.</li>
+<li><a href="#children-props"><code>children</code></a> - The props macro will accept child elements if you include the <code>children</code> prop.</li>
+</ul>
+<h4 id="default-props"><a class="doc-anchor" href="#default-props">§</a>Default Props</h4>
+<p>The <code>default</code> attribute lets you define a default value for a field if it isn’t set when creating the component</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="comment">// The default attributes makes your field optional in the component and uses the default value if it is not set.
+    </span><span class="attr">#[props(default)]
+    </span>text: String,
+
+    <span class="doccomment">/// You can also set an explicit default value instead of using the `Default` implementation.
+    </span><span class="attr">#[props(default = <span class="string">"red"</span>.to_string())]
+    </span>color: String,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            color: props.color,
+            <span class="string">"{props.text}"
+        </span>}
+    }
+}
+
+<span class="macro">rsx!</span> {
+    <span class="comment">// You can skip setting props that have a default value when you use the component.
+    </span>Button {}
+};</code></pre></div>
+<h4 id="optional-props"><a class="doc-anchor" href="#optional-props">§</a>Optional Props</h4>
+<p>When defining props, you may want to make a prop optional without defining an explicit default value. Any fields with the type <code>Option&lt;T&gt;</code> are automatically optional with a default value of <code>None</code>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="comment">// Since the `text` field is optional, you don't need to set it when you use the component.
+    </span>text: <span class="prelude-ty">Option</span>&lt;String&gt;,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button { {props.text.unwrap_or(<span class="string">"button"</span>.to_string())} }
+    }
+}
+
+<span class="macro">rsx!</span> {
+    Button {}
+};</code></pre></div>
+<p>If you want to make your <code>Option&lt;T&gt;</code> field required, you can use the <code>!optional</code> attribute:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="doccomment">/// You can use the `!optional` attribute on a field with the type `Option&lt;T&gt;` to make it required.
+    </span><span class="attr">#[props(!optional)]
+    </span>text: <span class="prelude-ty">Option</span>&lt;String&gt;,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button { {props.text.unwrap_or(<span class="string">"button"</span>.to_string())} }
+    }
+}
+
+<span class="macro">rsx!</span> {
+    Button {
+        text: <span class="prelude-val">None
+    </span>}
+};</code></pre></div>
+<h4 id="converting-props"><a class="doc-anchor" href="#converting-props">§</a>Converting Props</h4>
+<p>You can automatically convert a field into the correct type by using the <code>into</code> attribute. Any type you pass into the field will be converted with the [<code>Into</code>] trait:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="doccomment">/// You can use the `into` attribute on a field to convert types you pass in with the Into trait.
+    </span><span class="attr">#[props(into)]
+    </span>number: u64,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button { <span class="string">"{props.number}" </span>}
+    }
+}
+
+<span class="macro">rsx!</span> {
+    Button {
+        <span class="comment">// Because we used the into attribute, we can pass in any type that implements Into&lt;u64&gt;
+        </span>number: <span class="number">10u8
+    </span>}
+};</code></pre></div>
+<h4 id="formatted-props"><a class="doc-anchor" href="#formatted-props">§</a>Formatted Props</h4>
+<p>You can use formatted strings in attributes just like you would in an element. Any prop field with the type <code>String</code> can accept a formatted string:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    text: String,
+}
+
+<span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button { <span class="string">"{props.text}" </span>}
+    }
+}
+
+<span class="kw">let </span>name = <span class="string">"Bob"</span>;
+<span class="macro">rsx!</span> {
+    Button {
+        <span class="comment">// You can use formatted strings in props that accept String just like you would in an element.
+        </span>text: <span class="string">"Hello {name}!"
+    </span>}
+};</code></pre></div>
+<h4 id="children-props"><a class="doc-anchor" href="#children-props">§</a>Children Props</h4>
+<p>Rather than passing the RSX through a regular prop, you may wish to accept children similarly to how elements can have children. The “magic” children prop lets you achieve this:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(PartialEq, Clone, Props)]
+</span><span class="kw">struct </span>ClickableProps {
+    href: String,
+    children: Element,
+}
+
+<span class="kw">fn </span>Clickable(props: ClickableProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        a {
+            href: <span class="string">"{props.href}"</span>,
+            class: <span class="string">"fancy-button"</span>,
+            {props.children}
+        }
+    }
+}</code></pre></div>
+<p>This makes providing children to the component much simpler: simply put the RSX inside the {} brackets:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">rsx!</span> {
+    Clickable {
+        href: <span class="string">"https://www.youtube.com/watch?v=C-M2hs3sXGo"</span>,
+        <span class="string">"How to "
+        </span>i { <span class="string">"not" </span>}
+        <span class="string">" be seen"
+    </span>}
+};</code></pre></div>
+<h4 id="reactive-props"><a class="doc-anchor" href="#reactive-props">§</a>Reactive Props</h4>
+<p>In dioxus, when a prop changes, the component will rerun with the new value to update the UI. For example, if count changes from 0 to 1, this component will rerun and update the UI to show “Count: 1”:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>Counter(count: i32) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        div {
+            <span class="string">"Count: {count}"
+        </span>}
+    }
+}</code></pre></div>
+<p>Generally, just rerunning the component is enough to update the UI. However, if you use your prop inside reactive hooks like <code>use_memo</code> or <code>use_resource</code>, you may also want to restart those hooks when the prop changes:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>Counter(count: i32) -&gt; Element {
+    <span class="comment">// We can use a memo to calculate the doubled count. Since this memo will only be created the first time the component is run and `count` is not reactive, it will never update when `count` changes.
+    </span><span class="kw">let </span>doubled_count = use_memo(<span class="kw">move </span>|| count * <span class="number">2</span>);
+    <span class="macro">rsx!</span> {
+        div {
+            <span class="string">"Count: {count}"
+            "Doubled Count: {doubled_count}"
+        </span>}
+    }
+}</code></pre></div>
+<p>To fix this issue you can either:</p>
+<ol>
+<li>Make the prop reactive by wrapping it in <code>ReadOnlySignal</code> (recommended):</li>
+</ol>
+<p><code>ReadOnlySignal</code> is a <code>Copy</code> reactive value. Dioxus will automatically convert any value into a <code>ReadOnlySignal</code> when it is passed as a prop.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>Counter(count: ReadOnlySignal&lt;i32&gt;) -&gt; Element {
+    <span class="comment">// Since we made count reactive, the memo will automatically rerun when count changes.
+    </span><span class="kw">let </span>doubled_count = use_memo(<span class="kw">move </span>|| count() * <span class="number">2</span>);
+    <span class="macro">rsx!</span> {
+        div {
+            <span class="string">"Count: {count}"
+            "Doubled Count: {doubled_count}"
+        </span>}
+    }
+}</code></pre></div>
+<ol start="2">
+<li>Explicitly add the prop as a dependency to the reactive hook with <a href="https://docs.rs/dioxus-hooks/latest/dioxus_hooks/macro.use_reactive.html"><code>use_reactive</code></a>:</li>
+</ol>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>Counter(count: i32) -&gt; Element {
+    <span class="comment">// We can add the count prop as an explicit dependency to every reactive hook that uses it with use_reactive.
+    // The use_reactive macro takes a closure with explicit dependencies as its argument.
+    </span><span class="kw">let </span>doubled_count = use_memo(<span class="macro">use_reactive!</span>(|count| count * <span class="number">2</span>));
+    <span class="macro">rsx!</span> {
+        div {
+            <span class="string">"Count: {count}"
+            "Doubled Count: {doubled_count}"
+        </span>}
+    }
+}</code></pre></div>
+<h4 id="extending-elements"><a class="doc-anchor" href="#extending-elements">§</a>Extending Elements</h4>
+<p>The <code>extends</code> attribute lets you extend your props with all the attributes from an element or the global element attributes.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>CardProps {
+    <span class="doccomment">/// You can use the `extends` attribute on a field with the type `Vec&lt;Attribute&gt;` to extend the props with all the attributes from an element or the global element attributes.
+    </span><span class="attr">#[props(extends = GlobalAttributes)]
+    </span>attributes: Vec&lt;Attribute&gt;,
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Card(props: CardProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        <span class="comment">// Instead of copying over every single attribute, we can just spread the attributes from the props into the element.
+        </span>div { ..props.attributes, <span class="string">"card" </span>}
+    }
+}
+
+<span class="macro">rsx!</span> {
+    <span class="comment">// Since we extend global attributes, you can use any attribute that would normally appear on elements.
+    </span>Card {
+        width: <span class="string">"10px"</span>,
+        height: <span class="string">"10px"</span>,
+        color: <span class="string">"red"</span>,
+    }
+};</code></pre></div>
+<p>To extend the props with both the global attributes and the attributes of a specific element, you can use the <code>extends</code> attribute multiple times:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="attr">#[derive(Props, PartialEq, Clone)]
+</span><span class="kw">struct </span>ButtonProps {
+    <span class="attr">#[props(extends = GlobalAttributes, extends = button)]
+    </span>attributes: Vec&lt;Attribute&gt;,
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Button(props: ButtonProps) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button { ..props.attributes, <span class="string">"button" </span>}
+    }
+}
+
+<span class="macro">rsx!</span> {
+    Button {
+        <span class="comment">// A global attribute
+        </span>width: <span class="string">"10px"</span>,
+        <span class="comment">// A button specific attribute
+        </span>disabled: <span class="bool-val">true</span>,
+    }
+};</code></pre></div>
+<p>Note that extending from multiple elements will only work if the elements don’t have conflicting attributes.</p>
+</div></details></section></div></main></body></html>

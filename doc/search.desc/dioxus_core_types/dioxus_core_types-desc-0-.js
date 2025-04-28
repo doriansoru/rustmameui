@@ -1,0 +1,1 @@
+searchState.loadedDescShard("dioxus_core_types", 0, "Check if the event bubbles\nTake this type and format it into a Cow&lt;’static, str&gt;\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.")

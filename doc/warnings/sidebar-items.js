@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["warning"],"fn":["allow"],"struct":["Allow","AllowFuture","WarningId"],"trait":["AllowFutureExt","Warning"]};

@@ -1,0 +1,1 @@
+searchState.loadedDescShard("const_serialize_macro", 0, "Derive the const serialize trait for a struct")

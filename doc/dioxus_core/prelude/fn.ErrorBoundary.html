@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Create a new error boundary component that catches any errors thrown from child components"><title>ErrorBoundary in dioxus_core::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus_core/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus_core/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus_core/index.html">dioxus_<wbr>core</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Error<wbr>Boundary</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#details" title="Details">Details</a></li><li><a href="#example" title="Example">Example</a></li><li><a href="#usage" title="Usage">Usage</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus_<wbr>core::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus_core</a>::<wbr><a href="index.html">prelude</a></div><h1>Function <span class="fn">ErrorBoundary</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_core/error_boundary.rs.html#745-767">Source</a> </span></div><pre class="rust item-decl"><code>pub fn ErrorBoundary(props: ErrorBoundaryProps) -&gt; <a class="type" href="../type.Element.html" title="type dioxus_core::Element">Element</a></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Create a new error boundary component that catches any errors thrown from child components</p>
+<h3 id="details"><a class="doc-anchor" href="#details">§</a>Details</h3>
+<p>Error boundaries handle errors within a specific part of your application. Any errors passed up from a child will be caught by the nearest error boundary.</p>
+<h3 id="example"><a class="doc-anchor" href="#example">§</a>Example</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        ErrorBoundary {
+            handle_error: |errors: ErrorContext| <span class="macro">rsx!</span> { <span class="string">"Oops, we encountered an error. Please report {errors:?} to the developer of this application" </span>},
+            Counter {
+                multiplier: <span class="string">"1234"
+            </span>}
+        }
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Counter(multiplier: String) -&gt; Element {
+    <span class="comment">// You can bubble up errors with `?` inside components
+    </span><span class="kw">let </span>multiplier_parsed = multiplier.parse::&lt;usize&gt;()<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>count = use_signal(|| multiplier_parsed);
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// Or inside event handlers
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="kw">let </span>multiplier_parsed = multiplier.parse::&lt;usize&gt;()<span class="question-mark">?</span>;
+                <span class="kw-2">*</span>count.write() <span class="kw-2">*</span>= multiplier_parsed;
+                <span class="prelude-val">Ok</span>(())
+            },
+            <span class="string">"{count}x{multiplier}"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h3>
+<p>Error boundaries are an easy way to handle errors in your application.
+They are similar to <code>try/catch</code> in JavaScript, but they only catch errors in the tree below them.
+Error boundaries are quick to implement, but it can be useful to individually handle errors in your components to provide a better user experience when you know that an error is likely to occur.</p>
+</div></details></section></div></main></body></html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The rsx! macro makes it easy for developers to write jsx-style markup in their components."><title>rsx in dioxus::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dioxus" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc macro"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../dioxus/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../../dioxus/index.html">dioxus</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">rsx</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#elements" title="Elements">Elements</a></li><li><a href="#attributes" title="Attributes">Attributes</a><ul><li><a href="#optional-attributes" title="Optional Attributes">Optional Attributes</a></li><li><a href="#raw-attributes" title="Raw Attributes">Raw Attributes</a></li></ul></li><li><a href="#text" title="Text">Text</a></li><li><a href="#components" title="Components">Components</a></li><li><a href="#if-statements" title="If statements">If statements</a></li><li><a href="#for-loops" title="For loops">For loops</a></li><li><a href="#raw-expressions" title="Raw Expressions">Raw Expressions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In dioxus::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dioxus</a>::<wbr><a href="index.html">prelude</a></div><h1>Macro <span class="macro">rsx</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dioxus_core_macro/lib.rs.html#28">Source</a> </span></div><pre class="rust item-decl"><code>rsx!() { <span class="comment">/* proc-macro */</span> }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The rsx! macro makes it easy for developers to write jsx-style markup in their components.</p>
+<h3 id="elements"><a class="doc-anchor" href="#elements">§</a>Elements</h3>
+<p>You can render elements with rsx! with the element name and then braces surrounding the attributes and children.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">rsx!</span> {
+    div {
+        div {}
+    }
+};</code></pre></div>
+<details>
+<summary>Web Components</summary>
+<p>Dioxus will automatically render any elements with <code>-</code> as a untyped web component:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">rsx!</span> {
+    div-component {
+        div {}
+    }
+};</code></pre></div>
+<p>You can wrap your web component in a custom component to add type checking:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>MyDivComponent(width: i64) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        div-component {
+            <span class="string">"width"</span>: width
+        }
+    }
+}</code></pre></div>
+</details>
+<h3 id="attributes"><a class="doc-anchor" href="#attributes">§</a>Attributes</h3>
+<p>You can add attributes to any element inside the braces. Attributes are key-value pairs separated by a colon.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>width = <span class="number">100</span>;
+<span class="macro">rsx!</span> {
+    div {
+        <span class="comment">// Set the class attribute to "my-class"
+        </span>class: <span class="string">"my-class"</span>,
+        <span class="comment">// attribute strings are automatically formatted with the format macro
+        </span>width: <span class="string">"{width}px"</span>,
+    }
+};</code></pre></div>
+<h4 id="optional-attributes"><a class="doc-anchor" href="#optional-attributes">§</a>Optional Attributes</h4>
+<p>You can include optional attributes with an unterminated if statement as the value of the attribute:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">rsx!</span> {
+    div {
+        <span class="comment">// Set the class attribute to "my-class" if true
+        </span>class: <span class="kw">if </span>first_boolean {
+            <span class="string">"my-class"
+        </span>},
+        <span class="comment">// Set the class attribute to "my-other-class" if false
+        </span>class: <span class="kw">if </span>second_boolean {
+            <span class="string">"my-other-class"
+        </span>}
+    }
+};</code></pre></div>
+<h4 id="raw-attributes"><a class="doc-anchor" href="#raw-attributes">§</a>Raw Attributes</h4>
+<p>Dioxus defaults to attributes that are type checked as html. If you want to include an attribute that is not included in the html spec, you can use the <code>raw</code> attribute surrounded by quotes:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">rsx!</span> {
+    div {
+        <span class="comment">// Set the data-count attribute to "1"
+        </span><span class="string">"data-count"</span>: <span class="string">"1"
+    </span>}
+};</code></pre></div>
+<h3 id="text"><a class="doc-anchor" href="#text">§</a>Text</h3>
+<p>You can include text in your markup as a string literal:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>name = <span class="string">"World"</span>;
+<span class="macro">rsx!</span> {
+    div {
+        <span class="string">"Hello World"
+        </span><span class="comment">// Just like attributes, you can included formatted segments inside your text
+        </span><span class="string">"Hello {name}"
+    </span>}
+};</code></pre></div>
+<h3 id="components"><a class="doc-anchor" href="#components">§</a>Components</h3>
+<p>You can render any <a href="attr.component.html" title="attr dioxus::prelude::component"><code>crate::component</code></a>s you created inside your markup just like elements. Components must either start with a capital letter or contain a <code>_</code> character.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[component]
+</span><span class="kw">fn </span>HelloWorld() -&gt; Element {
+    <span class="macro">rsx!</span> { <span class="string">"hello world!" </span>}
+}
+
+<span class="macro">rsx!</span> {
+    div {
+        HelloWorld {}
+    }
+};</code></pre></div>
+<h3 id="if-statements"><a class="doc-anchor" href="#if-statements">§</a>If statements</h3>
+<p>You can use if statements to conditionally render children. The body of the for if statement is parsed as rsx markup:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>first_boolean = <span class="bool-val">true</span>;
+<span class="kw">let </span>second_boolean = <span class="bool-val">false</span>;
+<span class="macro">rsx!</span> {
+    <span class="kw">if </span>first_boolean {
+        div {
+            <span class="string">"first"
+        </span>}
+    }
+
+    <span class="kw">if </span>second_boolean {
+        <span class="string">"second"
+    </span>}
+};</code></pre></div>
+<h3 id="for-loops"><a class="doc-anchor" href="#for-loops">§</a>For loops</h3>
+<p>You can also use for loops to iterate over a collection of items. The body of the for loop is parsed as rsx markup:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>numbers = <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="macro">rsx!</span> {
+    <span class="kw">for </span>number <span class="kw">in </span>numbers {
+        div {
+            <span class="string">"{number}"
+        </span>}
+    }
+};</code></pre></div>
+<h3 id="raw-expressions"><a class="doc-anchor" href="#raw-expressions">§</a>Raw Expressions</h3>
+<p>You can include raw expressions inside your markup inside curly braces. Your expression must implement the <a href="https://docs.rs/dioxus-core/latest/dioxus_core/trait.IntoDynNode.html"><code>IntoDynNode</code></a> trait:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>name = <span class="string">"World"</span>;
+<span class="macro">rsx!</span> {
+    div {
+        <span class="comment">// Text can be converted into a dynamic node in rsx
+        </span>{name}
+    }
+    <span class="comment">// Iterators can also be converted into dynamic nodes
+    </span>{(<span class="number">0</span>..<span class="number">10</span>).map(|n| n * n).map(|number| <span class="macro">rsx!</span> { div { <span class="string">"{number}" </span>} })}
+};</code></pre></div>
+</div></details></section></div></main></body></html>

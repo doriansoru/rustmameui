@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["EventData"],"fn":["render_template_to_html"],"mod":["elements","events","extensions","geometry","global_attributes","input_data","point_interaction","prelude","svg_attributes"],"struct":["HtmlEvent","SerializedFileEngine","SerializedHtmlEventConverter"],"trait":["FileEngine","GlobalAttributesExtension","HasFileData","SvgAttributesExtension"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["copy_value_hoisted","signal_read_and_write_in_reactive_scope","signal_write_in_component_body"]};

@@ -1,0 +1,146 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Wry is a Cross-platform WebView rendering library."><title>wry - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="wry" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../wry/index.html">wry</a><span class="version">0.45.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#child-webviews" title="Child webviews">Child webviews</a></li><li><a href="#platform-considerations" title="Platform Considerations">Platform Considerations</a></li><li><a href="#android" title="Android">Android</a></li><li><a href="#feature-flags" title="Feature flags">Feature flags</a></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#traits" title="Traits">Traits</a></li><li><a href="#functions" title="Functions">Functions</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>wry</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/wry/lib.rs.html#5-1777">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Wry is a Cross-platform WebView rendering library.</p>
+<p>The webview requires a running event loop and a window type that implements <a href="../raw_window_handle/borrowed/trait.HasWindowHandle.html" title="trait raw_window_handle::borrowed::HasWindowHandle"><code>HasWindowHandle</code></a>,
+or a gtk container widget if you need to support X11 and Wayland.
+You can use a windowing library like <a href="https://docs.rs/tao"><code>tao</code></a> or <a href="https://docs.rs/winit"><code>winit</code></a>.</p>
+<h3 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h3>
+<p>This example leverages the <a href="../raw_window_handle/borrowed/trait.HasWindowHandle.html" title="trait raw_window_handle::borrowed::HasWindowHandle"><code>HasWindowHandle</code></a> and supports Windows, macOS, iOS, Android and Linux (X11 Only).
+See the following example using <a href="https://docs.rs/winit"><code>winit</code></a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>event_loop = EventLoop::new().unwrap();
+<span class="kw">let </span>window = WindowBuilder::new().build(<span class="kw-2">&amp;</span>event_loop).unwrap();
+
+<span class="kw">let </span>webview = WebViewBuilder::new(<span class="kw-2">&amp;</span>window)
+  .with_url(<span class="string">"https://tauri.app"</span>)
+  .build()
+  .unwrap();</code></pre></div>
+<p>If you also want to support Wayland too, then we recommend you use <a href="trait.WebViewBuilderExtUnix.html#tymethod.new_gtk" title="associated function wry::WebViewBuilderExtUnix::new_gtk"><code>WebViewBuilderExtUnix::new_gtk</code></a> on Linux.
+See the following example using <a href="https://docs.rs/tao"><code>tao</code></a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>event_loop = EventLoop::new();
+<span class="kw">let </span>window = WindowBuilder::new().build(<span class="kw-2">&amp;</span>event_loop).unwrap();
+
+<span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
+</span><span class="kw">let </span>builder = WebViewBuilder::new(<span class="kw-2">&amp;</span>window);
+<span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+</span><span class="kw">let </span>builder = WebViewBuilder::new_gtk(window.gtk_window());
+
+<span class="kw">let </span>webview = builder
+  .with_url(<span class="string">"https://tauri.app"</span>)
+  .build()
+  .unwrap();</code></pre></div>
+<h3 id="child-webviews"><a class="doc-anchor" href="#child-webviews">§</a>Child webviews</h3>
+<p>You can use <a href="struct.WebView.html#method.new_as_child" title="associated function wry::WebView::new_as_child"><code>WebView::new_as_child</code></a> or <a href="struct.WebViewBuilder.html#method.new_as_child" title="associated function wry::WebViewBuilder::new_as_child"><code>WebViewBuilder::new_as_child</code></a> to create the webview as a child inside another window. This is supported on
+macOS, Windows and Linux (X11 Only).</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>event_loop = EventLoop::new().unwrap();
+<span class="kw">let </span>window = WindowBuilder::new().build(<span class="kw-2">&amp;</span>event_loop).unwrap();
+
+<span class="kw">let </span>webview = WebViewBuilder::new_as_child(<span class="kw-2">&amp;</span>window)
+  .with_url(<span class="string">"https://tauri.app"</span>)
+  .with_bounds(Rect {
+    position: LogicalPosition::new(<span class="number">100</span>, <span class="number">100</span>).into(),
+    size: LogicalSize::new(<span class="number">200</span>, <span class="number">200</span>).into(),
+  })
+  .build()
+  .unwrap();</code></pre></div>
+<p>If you want to support X11 and Wayland at the same time, we recommend using
+<a href="trait.WebViewExtUnix.html#tymethod.new_gtk" title="associated function wry::WebViewExtUnix::new_gtk"><code>WebViewExtUnix::new_gtk</code></a> or <a href="trait.WebViewBuilderExtUnix.html#tymethod.new_gtk" title="associated function wry::WebViewBuilderExtUnix::new_gtk"><code>WebViewBuilderExtUnix::new_gtk</code></a> with <a href="../gtk/auto/fixed/struct.Fixed.html" title="struct gtk::auto::fixed::Fixed"><code>gtk::Fixed</code></a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>event_loop = EventLoop::new();
+<span class="kw">let </span>window = WindowBuilder::new().build(<span class="kw-2">&amp;</span>event_loop).unwrap();
+
+<span class="attr">#[cfg(not(target_os = <span class="string">"linux"</span>))]
+</span><span class="kw">let </span>builder = WebViewBuilder::new_as_child(<span class="kw-2">&amp;</span>window);
+
+<span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+</span><span class="kw">let </span>gtk_fixed = {
+  <span class="kw">let </span>vbox = window.default_vbox().unwrap(); <span class="comment">// tao adds a gtk::Box by default
+  </span><span class="kw">let </span>fixed = gtk::Fixed::new();
+  vbox.pack_start(<span class="kw-2">&amp;</span>fixed, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="number">0</span>);
+  fixed
+};
+
+<span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+</span><span class="kw">let </span>builder = WebViewBuilder::new_gtk(<span class="kw-2">&amp;</span>gtk_fixed);
+
+<span class="kw">let </span>webview = builder
+  .with_url(<span class="string">"https://tauri.app"</span>)
+  .with_bounds(Rect {
+    position: LogicalPosition::new(<span class="number">100</span>, <span class="number">100</span>).into(),
+    size: LogicalSize::new(<span class="number">200</span>, <span class="number">200</span>).into(),
+  })
+  .build()
+  .unwrap();</code></pre></div>
+<h3 id="platform-considerations"><a class="doc-anchor" href="#platform-considerations">§</a>Platform Considerations</h3>
+<p>Note that on Linux, we use webkit2gtk webviews so if the windowing library doesn’t support gtk (as in <a href="https://docs.rs/winit"><code>winit</code></a>)
+you’ll need to call <a href="../gtk/rt/fn.init.html" title="fn gtk::rt::init"><code>gtk::init</code></a> before creating the webview and then call <a href="../gtk/auto/functions/fn.main_iteration_do.html" title="fn gtk::auto::functions::main_iteration_do"><code>gtk::main_iteration_do</code></a> alongside
+your windowing library event loop.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+</span>gtk::init().unwrap(); <span class="comment">// &lt;----- IMPORTANT
+</span><span class="kw">let </span>event_loop = EventLoop::new().unwrap();
+
+<span class="kw">let </span>window = Window::new(<span class="kw-2">&amp;</span>event_loop).unwrap();
+<span class="kw">let </span>webview = WebView::new(<span class="kw-2">&amp;</span>window);
+
+event_loop.run(|_e, _evl|{
+  <span class="comment">// process winit events
+
+  // then advance gtk event loop  &lt;----- IMPORTANT
+  </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+  </span><span class="kw">while </span>gtk::events_pending() {
+    gtk::main_iteration_do(<span class="bool-val">false</span>);
+  }
+}).unwrap();</code></pre></div>
+<h3 id="android"><a class="doc-anchor" href="#android">§</a>Android</h3>
+<p>In order for <code>wry</code> to be able to create webviews on Android, there is a few requirements that your application needs to uphold:</p>
+<ol>
+<li>You need to set a few environment variables that will be used to generate the necessary kotlin
+files that you need to include in your Android application for wry to function properly.
+<ul>
+<li><code>WRY_ANDROID_PACKAGE</code>: which is the reversed domain name of your android project and the app name in snake_case, for example, <code>com.wry.example.wry_app</code></li>
+<li><code>WRY_ANDROID_LIBRARY</code>: for example, if your cargo project has a lib name <code>wry_app</code>, it will generate <code>libwry_app.so</code> so you se this env var to <code>wry_app</code></li>
+<li><code>WRY_ANDROID_KOTLIN_FILES_OUT_DIR</code>: for example, <code>path/to/app/src/main/kotlin/com/wry/example</code></li>
+</ul>
+</li>
+<li>Your main Android Activity needs to inherit <code>AppCompatActivity</code>, preferably it should use the generated <code>WryActivity</code> or inherit it.</li>
+<li>Your Rust app needs to call <code>wry::android_setup</code> function to setup the necessary logic to be able to create webviews later on.</li>
+<li>Your Rust app needs to call <code>wry::android_binding!</code> macro to setup the JNI functions that will be called by <code>WryActivity</code> and various other places.</li>
+</ol>
+<p>It is recommended to use <a href="https://docs.rs/tao/latest/tao/"><code>tao</code></a> crate as it provides maximum compatibility with <code>wry</code></p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[cfg(target_os = <span class="string">"android"</span>)]
+</span>{
+  <span class="macro">tao::android_binding!</span>(
+      com_example,
+      wry_app,
+      WryActivity,
+      wry::android_setup, <span class="comment">// pass the wry::android_setup function to tao which will invoke when the event loop is created
+      </span>_start_app
+  );
+  <span class="macro">wry::android_binding!</span>(com_example, ttt);
+}</code></pre></div>
+<p>If this feels overwhelming, you can just use the preconfigured template from <a href="https://github.com/tauri-apps/cargo-mobile2"><code>cargo-mobile2</code></a>.</p>
+<p>For more inforamtion, checkout <a href="https://github.com/tauri-apps/wry/blob/dev/MOBILE.md">MOBILE.md</a>.</p>
+<h3 id="feature-flags"><a class="doc-anchor" href="#feature-flags">§</a>Feature flags</h3>
+<p>Wry uses a set of feature flags to toggle several advanced features.</p>
+<ul>
+<li><code>os-webview</code> (default): Enables the default WebView framework on the platform. This must be enabled
+for the crate to work. This feature was added in preparation of other ports like cef and servo.</li>
+<li><code>protocol</code> (default): Enables <a href="struct.WebViewBuilder.html#method.with_custom_protocol" title="method wry::WebViewBuilder::with_custom_protocol"><code>WebViewBuilder::with_custom_protocol</code></a> to define custom URL scheme for handling tasks like
+loading assets.</li>
+<li><code>drag-drop</code> (default): Enables <a href="struct.WebViewBuilder.html#method.with_drag_drop_handler" title="method wry::WebViewBuilder::with_drag_drop_handler"><code>WebViewBuilder::with_drag_drop_handler</code></a> to control the behaviour when there are files
+interacting with the window.</li>
+<li><code>devtools</code>: Enables devtools on release builds. Devtools are always enabled in debug builds.
+On <strong>macOS</strong>, enabling devtools, requires calling private apis so you should not enable this flag in release
+build if your app needs to publish to App Store.</li>
+<li><code>transparent</code>: Transparent background on <strong>macOS</strong> requires calling private functions.
+Avoid this in release build if your app needs to publish to App Store.</li>
+<li><code>fullscreen</code>: Fullscreen video and other media on <strong>macOS</strong> requires calling private functions.
+Avoid this in release build if your app needs to publish to App Store.
+libraries and prevent from building documentation on doc.rs fails.</li>
+<li><code>linux-body</code>: Enables body support of custom protocol request on Linux. Requires
+webkit2gtk v2.40 or above.</li>
+<li><code>tracing</code>: enables <a href="https://docs.rs/tracing"><code>tracing</code></a> for <code>evaluate_script</code>, <code>ipc_handler</code> and `custom_protocols.</li>
+</ul>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.raw_window_handle"><code>pub use <a class="mod" href="../raw_window_handle/index.html" title="mod raw_window_handle">raw_window_handle</a>;</code></dt><dt id="reexport.dpi"><code>pub use <a class="mod" href="../dpi/index.html" title="mod dpi">dpi</a>;</code></dt><dt id="reexport.http"><code>pub use <a class="mod" href="../http/index.html" title="mod http">http</a>;</code></dt></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.ProxyEndpoint.html" title="struct wry::ProxyEndpoint">Proxy<wbr>Endpoint</a></dt><dt><a class="struct" href="struct.Rect.html" title="struct wry::Rect">Rect</a></dt><dd>A rectangular region.</dd><dt><a class="struct" href="struct.RequestAsyncResponder.html" title="struct wry::RequestAsyncResponder">Request<wbr>Async<wbr>Responder</a></dt><dd>Resolves a custom protocol <a href="../http/request/struct.Request.html" title="struct http::request::Request"><code>Request</code></a> asynchronously.</dd><dt><a class="struct" href="struct.WebContext.html" title="struct wry::WebContext">WebContext</a></dt><dd>A context that is shared between multiple <a href="struct.WebView.html" title="struct wry::WebView"><code>WebView</code></a>s.</dd><dt><a class="struct" href="struct.WebView.html" title="struct wry::WebView">WebView</a></dt><dd>The fundamental type to present a <a href="struct.WebView.html" title="struct wry::WebView"><code>WebView</code></a>.</dd><dt><a class="struct" href="struct.WebViewAttributes.html" title="struct wry::WebViewAttributes">WebView<wbr>Attributes</a></dt><dt><a class="struct" href="struct.WebViewBuilder.html" title="struct wry::WebViewBuilder">WebView<wbr>Builder</a></dt><dd>Builder type of <a href="struct.WebView.html" title="struct wry::WebView"><code>WebView</code></a>.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.DragDropEvent.html" title="enum wry::DragDropEvent">Drag<wbr>Drop<wbr>Event</a></dt><dd>An event describing drag and drop operations on the webview.</dd><dt><a class="enum" href="enum.Error.html" title="enum wry::Error">Error</a></dt><dd>Errors returned by wry.</dd><dt><a class="enum" href="enum.PageLoadEvent.html" title="enum wry::PageLoadEvent">Page<wbr>Load<wbr>Event</a></dt><dd>Type of of page loading event</dd><dt><a class="enum" href="enum.ProxyConfig.html" title="enum wry::ProxyConfig">Proxy<wbr>Config</a></dt><dt><a class="enum" href="enum.Theme.html" title="enum wry::Theme">Theme</a></dt><dd>WebView theme.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.WebViewBuilderExtUnix.html" title="trait wry::WebViewBuilderExtUnix">WebView<wbr>Builder<wbr>ExtUnix</a></dt><dt><a class="trait" href="trait.WebViewExtUnix.html" title="trait wry::WebViewExtUnix">WebView<wbr>ExtUnix</a></dt><dd>Additional methods on <code>WebView</code> that are specific to Linux.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.webview_version.html" title="fn wry::webview_version">webview_<wbr>version</a></dt><dd>Get WebView/Webkit version on current platform.</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.RGBA.html" title="type wry::RGBA">RGBA</a></dt><dd>Type alias for a color in the RGBA format.</dd><dt><a class="type" href="type.Result.html" title="type wry::Result">Result</a></dt><dd>Convenient type alias of Result type for wry.</dd></dl></section></div></main></body></html>

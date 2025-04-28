@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["WheelDelta"],"struct":["ClientSpace","Coordinates","ElementSpace","Lines","PageSpace","Pages","Pixels","ScreenSpace"],"type":["ClientPoint","ElementPoint","LinesVector","PagePoint","PagesVector","PixelsRect","PixelsSize","PixelsVector2D","PixelsVector3D","ScreenPoint"]};

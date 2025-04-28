@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BadIcon","Error","MouseButton","MouseButtonState","TrayIconEvent"],"mod":["menu"],"struct":["Icon","Rect","TrayIcon","TrayIconAttributes","TrayIconBuilder","TrayIconId"],"type":["Result","TrayIconEventReceiver"]};

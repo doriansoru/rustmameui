@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Dioxus Signals"><title>dioxus_signals - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="dioxus_signals" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../dioxus_signals/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../dioxus_signals/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../dioxus_signals/index.html">dioxus_<wbr>signals</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#dioxus-signals" title="Dioxus Signals">Dioxus Signals</a><ul><li><a href="#copy-data" title="Copy Data">Copy Data</a></li><li><a href="#local-subscriptions" title="Local Subscriptions">Local Subscriptions</a></li><li><a href="#computed-data" title="Computed Data">Computed Data</a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#traits" title="Traits">Traits</a></li><li><a href="#functions" title="Functions">Functions</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>dioxus_signals</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/dioxus_signals/lib.rs.html#1-43">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="dioxus-signals"><a class="doc-anchor" href="#dioxus-signals">§</a>Dioxus Signals</h2>
+<p>Dioxus Signals is an ergonomic Copy runtime for data with local subscriptions.</p>
+<h3 id="copy-data"><a class="doc-anchor" href="#copy-data">§</a>Copy Data</h3>
+<p>All signals implement Copy, even if the inner value does not implement copy. This makes it easy to move any data into futures or children.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>dioxus_signals::<span class="kw-2">*</span>;
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>signal = use_signal(|| <span class="string">"hello world"</span>.to_string());
+
+    spawn(<span class="kw">async move </span>{
+        <span class="comment">// signal is Copy even though String is not copy
+        </span><span class="macro">print!</span>(<span class="string">"{signal}"</span>);
+    });
+
+    <span class="macro">rsx!</span> {
+        <span class="string">"{signal}"
+    </span>}
+}</code></pre></div>
+<h3 id="local-subscriptions"><a class="doc-anchor" href="#local-subscriptions">§</a>Local Subscriptions</h3>
+<p>Signals will only subscribe to components when you read from the signal in that component. It will never subscribe to a component when reading data in a future or event handler.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>dioxus_signals::<span class="kw-2">*</span>;
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="comment">// Because signal is never read in this component, this component will not rerun when the signal changes
+    </span><span class="kw">let </span><span class="kw-2">mut </span>signal = use_signal(|| <span class="number">0</span>);
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                signal += <span class="number">1</span>;
+            },
+            <span class="string">"Increase"
+        </span>}
+        <span class="kw">for </span>id <span class="kw">in </span><span class="number">0</span>..<span class="number">10 </span>{
+            Child {
+                signal,
+            }
+        }
+    }
+}
+
+<span class="attr">#[derive(Props, Clone, PartialEq)]
+</span><span class="kw">struct </span>ChildProps {
+    signal: Signal&lt;usize&gt;,
+}
+
+<span class="kw">fn </span>Child(props: ChildProps) -&gt; Element {
+    <span class="comment">// This component does read from the signal, so when the signal changes it will rerun
+    </span><span class="macro">rsx!</span> {
+        <span class="string">"{props.signal}"
+    </span>}
+}</code></pre></div>
+<p>Because subscriptions happen when you read from (not create) the data, you can provide signals through the normal context API:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>dioxus_signals::<span class="kw-2">*</span>;
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="comment">// Because signal is never read in this component, this component will not rerun when the signal changes
+    </span>use_context_provider(|| Signal::new(<span class="number">0</span>));
+
+    <span class="macro">rsx!</span> {
+        Child {}
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Child() -&gt; Element {
+    <span class="kw">let </span>signal: Signal&lt;i32&gt; = use_context();
+    <span class="comment">// This component does read from the signal, so when the signal changes it will rerun
+    </span><span class="macro">rsx!</span> {
+        <span class="string">"{signal}"
+    </span>}
+}</code></pre></div>
+<h3 id="computed-data"><a class="doc-anchor" href="#computed-data">§</a>Computed Data</h3>
+<p>In addition to local subscriptions in components, <code>dioxus-signals</code> provides a way to derive data with local subscriptions.</p>
+<p>The use_memo hook will only rerun when any signals inside the hook change:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>dioxus_signals::<span class="kw-2">*</span>;
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span><span class="kw-2">mut </span>signal = use_signal(|| <span class="number">0</span>);
+    <span class="kw">let </span>doubled = use_memo(<span class="kw">move </span>|| signal * <span class="number">2</span>);
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| signal += <span class="number">1</span>,
+            <span class="string">"Increase"
+        </span>}
+        Child {
+            signal: doubled
+        }
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>Child(signal: ReadOnlySignal&lt;usize&gt;) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        <span class="string">"{signal}"
+    </span>}
+}</code></pre></div>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="warnings/index.html" title="mod dioxus_signals::warnings">warnings</a></dt><dd>Warnings that can be triggered by suspicious usage of signals</dd></dl><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><dl class="item-table"><dt><a class="macro" href="macro.default_impl.html" title="macro dioxus_signals::default_impl">default_<wbr>impl</a></dt><dd>This macro is used to generate a <code>impl Default</code> block for any type with the function new_maybe_sync that takes a generic <code>T</code></dd><dt><a class="macro" href="macro.eq_impls.html" title="macro dioxus_signals::eq_impls">eq_<wbr>impls</a></dt><dd>This macro is used to generate <code>impl PartialEq</code> blocks for any Readable type that takes a generic <code>T</code></dd><dt><a class="macro" href="macro.fmt_impls.html" title="macro dioxus_signals::fmt_impls">fmt_<wbr>impls</a></dt><dd>This macro is used to generate <code>impl Display</code>, and <code>impl Debug</code> blocks for any Readable type that takes a generic <code>T</code></dd><dt><a class="macro" href="macro.read_impls.html" title="macro dioxus_signals::read_impls">read_<wbr>impls</a></dt><dd>This macro is used to generate <code>impl Display</code>, <code>impl Debug</code>, <code>impl PartialEq</code>, and <code>impl Eq</code> blocks for any Readable type that takes a generic <code>T</code></dd><dt><a class="macro" href="macro.write_impls.html" title="macro dioxus_signals::write_impls">write_<wbr>impls</a></dt><dd>This macro is used to generate <code>impl Add</code>, <code>impl AddAssign</code>, <code>impl Sub</code>, <code>impl SubAssign</code>, <code>impl Mul</code>, <code>impl MulAssign</code>, <code>impl Div</code>, and <code>impl DivAssign</code> blocks for any Writable type that takes a generic <code>T</code></dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.CopyValue.html" title="struct dioxus_signals::CopyValue">Copy<wbr>Value</a></dt><dd>CopyValue is a wrapper around a value to make the value mutable and Copy.</dd><dt><a class="struct" href="struct.Global.html" title="struct dioxus_signals::Global">Global</a></dt><dd>A lazy value that is created once per application and can be accessed from anywhere in that application</dd><dt><a class="struct" href="struct.GlobalLazyContext.html" title="struct dioxus_signals::GlobalLazyContext">Global<wbr>Lazy<wbr>Context</a></dt><dd>The context for global signals</dd><dt><a class="struct" href="struct.MappedSignal.html" title="struct dioxus_signals::MappedSignal">Mapped<wbr>Signal</a></dt><dd>A read only signal that has been mapped to a new type.</dd><dt><a class="struct" href="struct.Memo.html" title="struct dioxus_signals::Memo">Memo</a></dt><dd>Memos are the result of computing a value from <code>use_memo</code>.</dd><dt><a class="struct" href="struct.Owner.html" title="struct dioxus_signals::Owner">Owner</a></dt><dd>Owner: Handles dropping generational boxes. The owner acts like a runtime lifetime guard. Any states that you create with an owner will be dropped when that owner is dropped.</dd><dt><a class="struct" href="struct.ReadOnlySignal.html" title="struct dioxus_signals::ReadOnlySignal">Read<wbr>Only<wbr>Signal</a></dt><dd>A signal that can only be read from.</dd><dt><a class="struct" href="struct.ReadableValueIterator.html" title="struct dioxus_signals::ReadableValueIterator">Readable<wbr>Value<wbr>Iterator</a></dt><dd>An iterator over the values of a <code>Readable&lt;Vec&lt;T&gt;&gt;</code>.</dd><dt><a class="struct" href="struct.SetCompare.html" title="struct dioxus_signals::SetCompare">SetCompare</a></dt><dd>An object that can efficiently compare a value to a set of values.</dd><dt><a class="struct" href="struct.Signal.html" title="struct dioxus_signals::Signal">Signal</a></dt><dd>Signals are a Copy state management solution with automatic dependency tracking.</dd><dt><a class="struct" href="struct.SignalData.html" title="struct dioxus_signals::SignalData">Signal<wbr>Data</a></dt><dd>The data stored for tracking in a signal.</dd><dt><a class="struct" href="struct.SyncStorage.html" title="struct dioxus_signals::SyncStorage">Sync<wbr>Storage</a></dt><dd>A thread safe storage. This is slower than the unsync storage, but allows you to share the value between threads.</dd><dt><a class="struct" href="struct.UnsyncStorage.html" title="struct dioxus_signals::UnsyncStorage">Unsync<wbr>Storage</a></dt><dd>A unsync storage. This is the default storage type.</dd><dt><a class="struct" href="struct.WritableValueIterator.html" title="struct dioxus_signals::WritableValueIterator">Writable<wbr>Value<wbr>Iterator</a></dt><dd>An iterator over the values of a <a href="trait.Writable.html" title="trait dioxus_signals::Writable"><code>Writable&lt;Vec&lt;T&gt;&gt;</code></a>.</dd><dt><a class="struct" href="struct.Write.html" title="struct dioxus_signals::Write">Write</a></dt><dd>A mutable reference to a signal’s value. This reference acts similarly to <a href="https://doc.rust-lang.org/1.86.0/core/cell/struct.RefMut.html" title="struct core::cell::RefMut"><code>std::cell::RefMut</code></a>, but it has extra debug information
+and integrates with the reactive system to automatically update dependents.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.BorrowError.html" title="enum dioxus_signals::BorrowError">Borrow<wbr>Error</a></dt><dd>An error that can occur when trying to borrow a value.</dd><dt><a class="enum" href="enum.BorrowMutError.html" title="enum dioxus_signals::BorrowMutError">Borrow<wbr>MutError</a></dt><dd>An error that can occur when trying to borrow a value mutably.</dd><dt><a class="enum" href="enum.GlobalKey.html" title="enum dioxus_signals::GlobalKey">Global<wbr>Key</a></dt><dd>A key used to identify a signal in the global signal context</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.AnyStorage.html" title="trait dioxus_signals::AnyStorage">AnyStorage</a></dt><dd>A trait for any storage backing type.</dd><dt><a class="trait" href="trait.InitializeFromFunction.html" title="trait dioxus_signals::InitializeFromFunction">Initialize<wbr>From<wbr>Function</a></dt><dd>A trait for an item that can be constructed from an initialization function</dd><dt><a class="trait" href="trait.Readable.html" title="trait dioxus_signals::Readable">Readable</a></dt><dd>A trait for states that can be read from like <a href="struct.Signal.html" title="struct dioxus_signals::Signal"><code>crate::Signal</code></a>, <a href="type.GlobalSignal.html" title="type dioxus_signals::GlobalSignal"><code>crate::GlobalSignal</code></a>, or <a href="struct.ReadOnlySignal.html" title="struct dioxus_signals::ReadOnlySignal"><code>crate::ReadOnlySignal</code></a>. You may choose to accept this trait as a parameter instead of the concrete type to allow for more flexibility in your API. For example, instead of creating two functions, one that accepts a <a href="struct.Signal.html" title="struct dioxus_signals::Signal"><code>crate::Signal</code></a> and one that accepts a <a href="type.GlobalSignal.html" title="type dioxus_signals::GlobalSignal"><code>crate::GlobalSignal</code></a>, you can create one function that accepts a <a href="trait.Readable.html" title="trait dioxus_signals::Readable"><code>Readable</code></a> type.</dd><dt><a class="trait" href="trait.ReadableOptionExt.html" title="trait dioxus_signals::ReadableOptionExt">Readable<wbr>Option<wbr>Ext</a></dt><dd>An extension trait for Readable&lt;Option<T>&gt; that provides some convenience methods.</dd><dt><a class="trait" href="trait.ReadableResultExt.html" title="trait dioxus_signals::ReadableResultExt">Readable<wbr>Result<wbr>Ext</a></dt><dd>An extension trait for Readable&lt;Option<T>&gt; that provides some convenience methods.</dd><dt><a class="trait" href="trait.ReadableVecExt.html" title="trait dioxus_signals::ReadableVecExt">Readable<wbr>VecExt</a></dt><dd>An extension trait for Readable&lt;Vec<T>&gt; that provides some convenience methods.</dd><dt><a class="trait" href="trait.Storage.html" title="trait dioxus_signals::Storage">Storage</a></dt><dd>A trait for a storage backing type. (RefCell, RwLock, etc.)</dd><dt><a class="trait" href="trait.Writable.html" title="trait dioxus_signals::Writable">Writable</a></dt><dd>A trait for states that can be written to like <a href="struct.Signal.html" title="struct dioxus_signals::Signal"><code>crate::Signal</code></a>. You may choose to accept this trait as a parameter instead of the concrete type to allow for more flexibility in your API.</dd><dt><a class="trait" href="trait.WritableOptionExt.html" title="trait dioxus_signals::WritableOptionExt">Writable<wbr>Option<wbr>Ext</a></dt><dd>An extension trait for <a href="trait.Writable.html" title="trait dioxus_signals::Writable"><code>Writable&lt;Option&lt;T&gt;&gt;</code></a>` that provides some convenience methods.</dd><dt><a class="trait" href="trait.WritableVecExt.html" title="trait dioxus_signals::WritableVecExt">Writable<wbr>VecExt</a></dt><dd>An extension trait for <a href="trait.Writable.html" title="trait dioxus_signals::Writable"><code>Writable&lt;Vec&lt;T&gt;&gt;</code></a> that provides some convenience methods.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.get_global_context.html" title="fn dioxus_signals::get_global_context">get_<wbr>global_<wbr>context</a></dt><dd>Get the global context for signals</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.GlobalMemo.html" title="type dioxus_signals::GlobalMemo">Global<wbr>Memo</a></dt><dd>A memo that can be accessed from anywhere in the application and created in a static</dd><dt><a class="type" href="type.GlobalSignal.html" title="type dioxus_signals::GlobalSignal">Global<wbr>Signal</a></dt><dd>A signal that can be accessed from anywhere in the application and created in a static</dd><dt><a class="type" href="type.ReadSignal.html" title="type dioxus_signals::ReadSignal">Read<wbr>Signal</a></dt><dd>A signal that can only be read from.</dd><dt><a class="type" href="type.ReadableRef.html" title="type dioxus_signals::ReadableRef">Readable<wbr>Ref</a></dt><dd>A reference to a value that can be read from.</dd><dt><a class="type" href="type.SyncSignal.html" title="type dioxus_signals::SyncSignal">Sync<wbr>Signal</a></dt><dd>A signal that can safely shared between threads.</dd><dt><a class="type" href="type.WritableRef.html" title="type dioxus_signals::WritableRef">Writable<wbr>Ref</a></dt><dd>A reference to a value that can be read from.</dd></dl></section></div></main></body></html>

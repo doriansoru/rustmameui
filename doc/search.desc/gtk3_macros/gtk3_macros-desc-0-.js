@@ -1,0 +1,1 @@
+searchState.loadedDescShard("gtk3_macros", 0, "Derive macro for using a composite template in a widget.")

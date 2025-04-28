@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ClientMsg","DevserverMsg"],"fn":["apply_changes","connect"],"struct":["HotReloadMsg"]};

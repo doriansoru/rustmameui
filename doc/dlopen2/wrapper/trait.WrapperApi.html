@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Trait for defining library API."><title>WrapperApi in dlopen2::wrapper - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dlopen2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../dlopen2/index.html">dlopen2</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Wrapper<wbr>Api</a></h2><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.load" title="load">load</a></li></ul><h3><a href="#foreign-impls">Implementations on Foreign Types</a></h3><ul class="block"><li><a href="#impl-WrapperApi-for-Option%3CT%3E" title="Option&#60;T&#62;">Option&#60;T&#62;</a></li></ul><h3><a href="#dyn-compatibility">Dyn Compatibility</a></h3><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In dlopen2::<wbr>wrapper</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dlopen2</a>::<wbr><a href="index.html">wrapper</a></div><h1>Trait <span class="trait">WrapperApi</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dlopen2/wrapper/api.rs.html#78-84">Source</a> </span></div><pre class="rust item-decl"><code>pub trait WrapperApi<div class="where">where
+    Self: <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,</div>{
+    // Required method
+    unsafe fn <a href="#tymethod.load" class="fn">load</a>(lib: &amp;<a class="struct" href="../raw/struct.Library.html" title="struct dlopen2::raw::Library">Library</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../enum.Error.html" title="enum dlopen2::Error">Error</a>&gt;;
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Trait for defining library API.</p>
+<p>This trait is intended to be used with <code>#[derive(WrapperApi)]</code> macro defined in the
+<code>dlopen2_derive</code> crate. It forces several restrictions on types that implement it:</p>
+<ul>
+<li>Only structures can implement this trait.</li>
+<li>All fields need to be private.</li>
+<li>Only functions, references and pointers are allowed.</li>
+<li>You can’t define a type using <code>type Fun =fn();</code> and use it in the structure. This is a limitation
+of the Rust reflection mechanism. Only raw functions, references and pointers are allowed.</li>
+<li>All arguments of functions need to be named.</li>
+</ul>
+<p>The <code>derive</code> macro not only generates implementation of <code>load()</code> function, but it also generates
+safe wrappers around the loaded symbols. These wrappers are named exactly like the field that
+they wrap. Wrappers of functions have the same arguments like original functions and wrappers of
+references are just simple accessors in the form of <code>&lt;field_name&gt;(&amp;self) -&gt; &amp;FieldType</code> or
+<code>&lt;field_name&gt;_mut(&amp;mut self) -&gt; &amp;mut FieldType</code>.
+Wrappers are not generated only for:</p>
+<ul>
+<li>Pointers - there is no safe way of preventing dangling symbols if a user has a direct access to
+pointers. The recommended approach here is to either use references instead of pointers or
+to manually create safe wrappers. For example C <code>const char *</code> can be manually converted into
+<code>&amp; std::ffi::CStr</code>.</li>
+<li>Variadic functions. Rust doesn’t have any mechanism that allows creating safe wrappers around
+them. You need to handle them manually.</li>
+</ul>
+<p>#Example</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::wrapper::{WrapperApi, Container};
+<span class="kw">use </span>std::os::raw::{c_char};
+<span class="kw">use </span>std::ffi::CStr;
+
+<span class="attr">#[derive(WrapperApi)]
+</span><span class="kw">struct </span>Example&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="attr">#[dlopen2_name=<span class="string">"function"</span>]
+    </span>do_something: <span class="kw">extern </span><span class="string">"C" </span><span class="kw">fn</span>(),
+    add_one: <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn </span>(arg: i32) -&gt; i32,
+    global_count: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>u32,
+    c_string: * <span class="kw">const </span>c_char,
+    <span class="attr">#[dlopen2_allow_null]
+    </span>maybe_null_ptr: * <span class="kw">const </span>(),
+}
+
+<span class="comment">//wrapper for c_string won't be generated, implement it here
+</span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Example&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub fn </span>c_string(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CStr {
+        <span class="kw">unsafe </span>{CStr::from_ptr(<span class="self">self</span>.c_string)}
+    }
+}
+
+<span class="kw">fn </span>main () {
+    <span class="kw">let </span><span class="kw-2">mut </span>cont: Container&lt;Example&gt; = <span class="kw">unsafe </span>{ Container::load(<span class="string">"libexample.dylib"</span>)}.unwrap();
+    cont.do_something();
+    <span class="kw">let </span>_result = <span class="kw">unsafe </span>{ cont.add_one(<span class="number">5</span>) };
+    <span class="kw-2">*</span>cont.global_count_mut() += <span class="number">1</span>;
+    <span class="macro">println!</span>(<span class="string">"C string: {}"</span>, cont.c_string().to_str().unwrap())
+}</code></pre></div>
+<p><strong>Note</strong>: <code>WrapperApi</code> should only be used together with <code>Container</code> structure, never to create
+a standalone object. API and library handle need to be kept together to prevent dangling symbols.</p>
+<p><strong>Note:</strong> By default obtained symbol name is the field name. You can change this by
+assigning the “dlopen2_name” attribute to the given field.</p>
+<p><strong>Note:</strong> By default <code>Error::NullSymbol</code> is returned if the loaded symbol name has a null value.
+While null is a valid value of a exported symbol, it is usually not expected by users of libraries.
+If in your scenario null is an acceptable value, you should assign
+“dlopen2_allow_null” attribute to the given field. Of course this makes sense only if the field
+is of pointer type.</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.load" class="method"><a class="src rightside" href="../../src/dlopen2/wrapper/api.rs.html#83">Source</a><h4 class="code-header">unsafe fn <a href="#tymethod.load" class="fn">load</a>(lib: &amp;<a class="struct" href="../raw/struct.Library.html" title="struct dlopen2::raw::Library">Library</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../enum.Error.html" title="enum dlopen2::Error">Error</a>&gt;</h4></section></summary><div class="docblock"><p>Load symbols from provided library.</p>
+</div></details></div><h2 id="dyn-compatibility" class="section-header">Dyn Compatibility<a href="#dyn-compatibility" class="anchor">§</a></h2><div class="dyn-compatibility-info"><p>This trait is <b>not</b> <a href="https://doc.rust-lang.org/1.86.0/reference/items/traits.html#dyn-compatibility">dyn compatible</a>.</p><p><i>In older versions of Rust, dyn compatibility was called "object safety", so this trait is not object safe.</i></p></div><h2 id="foreign-impls" class="section-header">Implementations on Foreign Types<a href="#foreign-impls" class="anchor">§</a></h2><details class="toggle implementors-toggle"><summary><section id="impl-WrapperApi-for-Option%3CT%3E" class="impl"><a class="src rightside" href="../../src/dlopen2/wrapper/option.rs.html#5-15">Source</a><a href="#impl-WrapperApi-for-Option%3CT%3E" class="anchor">§</a><h3 class="code-header">impl&lt;T&gt; <a class="trait" href="trait.WrapperApi.html" title="trait dlopen2::wrapper::WrapperApi">WrapperApi</a> for <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T&gt;<div class="where">where
+    T: <a class="trait" href="trait.WrapperApi.html" title="trait dlopen2::wrapper::WrapperApi">WrapperApi</a>,</div></h3></section></summary><div class="impl-items"><section id="method.load" class="method trait-impl"><a class="src rightside" href="../../src/dlopen2/wrapper/option.rs.html#9-14">Source</a><a href="#method.load" class="anchor">§</a><h4 class="code-header">unsafe fn <a href="#tymethod.load" class="fn">load</a>(lib: &amp;<a class="struct" href="../raw/struct.Library.html" title="struct dlopen2::raw::Library">Library</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.86.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="enum" href="../enum.Error.html" title="enum dlopen2::Error">Error</a>&gt;</h4></section></div></details><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"></div><script src="../../trait.impl/dlopen2/wrapper/api/trait.WrapperApi.js" data-ignore-extern-crates="core" async></script></section></div></main></body></html>

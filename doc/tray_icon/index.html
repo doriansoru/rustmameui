@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="tray-icon lets you create tray icons for desktop applications."><title>tray_icon - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tray_icon" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tray_icon/index.html">tray_<wbr>icon</a><span class="version">0.19.3</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#platforms-supported" title="Platforms supported:">Platforms supported:</a></li><li><a href="#platform-specific-notes" title="Platform-specific notes:">Platform-specific notes:</a></li><li><a href="#dependencies-linux-only" title="Dependencies (Linux Only)">Dependencies (Linux Only)</a><ul><li><a href="#arch-linux--manjaro" title="Arch Linux / Manjaro:">Arch Linux / Manjaro:</a></li><li><a href="#debian--ubuntu" title="Debian / Ubuntu:">Debian / Ubuntu:</a></li></ul></li><li><a href="#examples" title="Examples">Examples</a><ul><li><a href="#create-a-tray-icon-without-a-menu" title="Create a tray icon without a menu.">Create a tray icon without a menu.</a></li><li><a href="#create-a-tray-icon-with-a-menu" title="Create a tray icon with a menu.">Create a tray icon with a menu.</a></li></ul></li><li><a href="#processing-tray-events" title="Processing tray events">Processing tray events</a><ul><li><a href="#note-for-winit-or-tao-users" title="Note for winit or tao users:">Note for winit or tao users:</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>tray_icon</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/tray_icon/lib.rs.html#5-661">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>tray-icon lets you create tray icons for desktop applications.</p>
+<h2 id="platforms-supported"><a class="doc-anchor" href="#platforms-supported">§</a>Platforms supported:</h2>
+<ul>
+<li>Windows</li>
+<li>macOS</li>
+<li>Linux (gtk Only)</li>
+</ul>
+<h2 id="platform-specific-notes"><a class="doc-anchor" href="#platform-specific-notes">§</a>Platform-specific notes:</h2>
+<ul>
+<li>On Windows and Linux, an event loop must be running on the thread, on Windows, a win32 event loop and on Linux, a gtk event loop. It doesn’t need to be the main thread but you have to create the tray icon on the same thread as the event loop.</li>
+<li>On macOS, an event loop must be running on the main thread so you also need to create the tray icon on the main thread. You must make sure that the event loop is already running and not just created before creating a TrayIcon to prevent issues with fullscreen apps. In Winit for example the earliest you can create icons is on <a href="https://docs.rs/winit/latest/winit/event/enum.StartCause.html#variant.Init"><code>StartCause::Init</code></a>.</li>
+</ul>
+<h2 id="dependencies-linux-only"><a class="doc-anchor" href="#dependencies-linux-only">§</a>Dependencies (Linux Only)</h2>
+<p>On Linux, <code>gtk</code>, <code>libxdo</code> is used to make the predfined <code>Copy</code>, <code>Cut</code>, <code>Paste</code> and <code>SelectAll</code> menu items work and <code>libappindicator</code> or <code>libayatnat-appindicator</code> are used to create the tray icon, so make sure to install them on your system.</p>
+<h5 id="arch-linux--manjaro"><a class="doc-anchor" href="#arch-linux--manjaro">§</a>Arch Linux / Manjaro:</h5><div class="example-wrap"><pre class="language-sh"><code>pacman -S gtk3 xdotool libappindicator-gtk3 #or libayatana-appindicator</code></pre></div><h5 id="debian--ubuntu"><a class="doc-anchor" href="#debian--ubuntu">§</a>Debian / Ubuntu:</h5><div class="example-wrap"><pre class="language-sh"><code>sudo apt install libgtk-3-dev libxdo-dev libappindicator3-dev #or libayatana-appindicator3-dev</code></pre></div><h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2><h5 id="create-a-tray-icon-without-a-menu"><a class="doc-anchor" href="#create-a-tray-icon-without-a-menu">§</a>Create a tray icon without a menu.</h5>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tray_icon::{TrayIconBuilder, Icon};
+
+<span class="kw">let </span>tray_icon = TrayIconBuilder::new()
+    .with_tooltip(<span class="string">"system-tray - tray icon library!"</span>)
+    .with_icon(icon)
+    .build()
+    .unwrap();</code></pre></div>
+<h5 id="create-a-tray-icon-with-a-menu"><a class="doc-anchor" href="#create-a-tray-icon-with-a-menu">§</a>Create a tray icon with a menu.</h5>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tray_icon::{TrayIconBuilder, menu::Menu,Icon};
+
+<span class="kw">let </span>tray_menu = Menu::new();
+<span class="kw">let </span>tray_icon = TrayIconBuilder::new()
+    .with_menu(Box::new(tray_menu))
+    .with_tooltip(<span class="string">"system-tray - tray icon library!"</span>)
+    .with_icon(icon)
+    .build()
+    .unwrap();</code></pre></div>
+<h2 id="processing-tray-events"><a class="doc-anchor" href="#processing-tray-events">§</a>Processing tray events</h2>
+<p>You can use <a href="enum.TrayIconEvent.html#method.receiver" title="associated function tray_icon::TrayIconEvent::receiver"><code>TrayIconEvent::receiver</code></a> to get a reference to the <a href="type.TrayIconEventReceiver.html" title="type tray_icon::TrayIconEventReceiver"><code>TrayIconEventReceiver</code></a>
+which you can use to listen to events when a click happens on the tray icon</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tray_icon::TrayIconEvent;
+
+<span class="kw">if let </span><span class="prelude-val">Ok</span>(event) = TrayIconEvent::receiver().try_recv() {
+    <span class="macro">println!</span>(<span class="string">"{:?}"</span>, event);
+}</code></pre></div>
+<p>You can also listen for the menu events using <a href="menu/struct.MenuEvent.html#method.receiver" title="associated function tray_icon::menu::MenuEvent::receiver"><code>MenuEvent::receiver</code></a> to get events for the tray context menu.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>tray_icon::{TrayIconEvent, menu::MenuEvent};
+
+<span class="kw">if let </span><span class="prelude-val">Ok</span>(event) = TrayIconEvent::receiver().try_recv() {
+    <span class="macro">println!</span>(<span class="string">"tray event: {:?}"</span>, event);
+}
+
+<span class="kw">if let </span><span class="prelude-val">Ok</span>(event) = MenuEvent::receiver().try_recv() {
+    <span class="macro">println!</span>(<span class="string">"menu event: {:?}"</span>, event);
+}</code></pre></div>
+<h4 id="note-for-winit-or-tao-users"><a class="doc-anchor" href="#note-for-winit-or-tao-users">§</a>Note for <a href="https://docs.rs/winit">winit</a> or <a href="https://docs.rs/tao">tao</a> users:</h4>
+<p>You should use <a href="enum.TrayIconEvent.html#method.set_event_handler" title="associated function tray_icon::TrayIconEvent::set_event_handler"><code>TrayIconEvent::set_event_handler</code></a> and forward
+the tray icon events to the event loop by using <a href="https://docs.rs/winit/latest/winit/event_loop/struct.EventLoopProxy.html"><code>EventLoopProxy</code></a>
+so that the event loop is awakened on each tray icon event.
+Same can be done for menu events using [<code>MenuEvent::set_event_handler</code>].</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">enum </span>UserEvent {
+  TrayIconEvent(tray_icon::TrayIconEvent),
+  MenuEvent(tray_icon::menu::MenuEvent)
+}
+
+<span class="kw">let </span>event_loop = EventLoop::&lt;UserEvent&gt;::with_user_event().build().unwrap();
+
+<span class="kw">let </span>proxy = event_loop.create_proxy();
+tray_icon::TrayIconEvent::set_event_handler(<span class="prelude-val">Some</span>(<span class="kw">move </span>|event| {
+    proxy.send_event(UserEvent::TrayIconEvent(event));
+}));
+
+<span class="kw">let </span>proxy = event_loop.create_proxy();
+tray_icon::menu::MenuEvent::set_event_handler(<span class="prelude-val">Some</span>(<span class="kw">move </span>|event| {
+    proxy.send_event(UserEvent::MenuEvent(event));
+}));</code></pre></div>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.dpi"><code>pub use muda::<a class="mod" href="menu/dpi/index.html" title="mod tray_icon::menu::dpi">dpi</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="menu/index.html" title="mod tray_icon::menu">menu</a></dt><dd>Re-export of <a href="../muda/index.html" title="mod muda">muda</a> crate and used for tray context menu.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Icon.html" title="struct tray_icon::Icon">Icon</a></dt><dd>An icon used for the window titlebar, taskbar, etc.</dd><dt><a class="struct" href="struct.Rect.html" title="struct tray_icon::Rect">Rect</a></dt><dd>Describes a rectangle including position (x - y axis) and size.</dd><dt><a class="struct" href="struct.TrayIcon.html" title="struct tray_icon::TrayIcon">Tray<wbr>Icon</a></dt><dd>Tray icon struct and associated methods.</dd><dt><a class="struct" href="struct.TrayIconAttributes.html" title="struct tray_icon::TrayIconAttributes">Tray<wbr>Icon<wbr>Attributes</a></dt><dd>Attributes to use when creating a tray icon.</dd><dt><a class="struct" href="struct.TrayIconBuilder.html" title="struct tray_icon::TrayIconBuilder">Tray<wbr>Icon<wbr>Builder</a></dt><dd><a href="struct.TrayIcon.html" title="struct tray_icon::TrayIcon"><code>TrayIcon</code></a> builder struct and associated methods.</dd><dt><a class="struct" href="struct.TrayIconId.html" title="struct tray_icon::TrayIconId">Tray<wbr>Icon<wbr>Id</a></dt><dd>An unique id that is associated with a tray icon.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.BadIcon.html" title="enum tray_icon::BadIcon">BadIcon</a></dt><dd>An error produced when using <a href="struct.Icon.html#method.from_rgba" title="associated function tray_icon::Icon::from_rgba"><code>Icon::from_rgba</code></a> with invalid arguments.</dd><dt><a class="enum" href="enum.Error.html" title="enum tray_icon::Error">Error</a></dt><dd>Errors returned by tray-icon.</dd><dt><a class="enum" href="enum.MouseButton.html" title="enum tray_icon::MouseButton">Mouse<wbr>Button</a></dt><dd>Describes which mouse button triggered the event..</dd><dt><a class="enum" href="enum.MouseButtonState.html" title="enum tray_icon::MouseButtonState">Mouse<wbr>Button<wbr>State</a></dt><dd>Describes the mouse button state.</dd><dt><a class="enum" href="enum.TrayIconEvent.html" title="enum tray_icon::TrayIconEvent">Tray<wbr>Icon<wbr>Event</a></dt><dd>Describes a tray icon event.</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.Result.html" title="type tray_icon::Result">Result</a></dt><dd>Convenient type alias of Result type for tray-icon.</dd><dt><a class="type" href="type.TrayIconEventReceiver.html" title="type tray_icon::TrayIconEventReceiver">Tray<wbr>Icon<wbr>Event<wbr>Receiver</a></dt><dd>A reciever that could be used to listen to tray events.</dd></dl></section></div></main></body></html>

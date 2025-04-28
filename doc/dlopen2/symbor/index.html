@@ -1,0 +1,70 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="High-level and safe API for opening and getting symbols from dynamic libraries. It is based on symbol borrowing mechanism and supports automatic loading of symbols into structures."><title>dlopen2::symbor - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="dlopen2" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-3a5871a4.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../dlopen2/index.html">dlopen2</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module symbor</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#example-of-automatic-symbol-loading" title="Example of automatic symbol loading">Example of automatic symbol loading</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#traits" title="Traits">Traits</a></li><li><a href="#derives" title="Derive Macros">Derive Macros</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate dlopen2</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">dlopen2</a></div><h1>Module <span>symbor</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/dlopen2/symbor/mod.rs.html#1-110">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>High-level and safe API for opening and getting symbols from dynamic libraries.
+It is based on symbol borrowing mechanism and supports automatic loading of symbols into structures.</p>
+<p>This API uses Rust borrowing mechanism to prevent problems with dangling symbols
+that take place when the library gets closed but the symbols still exist and are used.</p>
+<p>#Example of a dangling symbol prevention</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::symbor::Library;
+<span class="kw">fn </span>main(){
+    <span class="kw">let </span>lib = Library::open(<span class="string">"libexample.dylib"</span>).unwrap();
+    <span class="kw">let </span>fun = <span class="kw">unsafe</span>{lib.symbol::&lt;<span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(f64)-&gt;f64&gt;(<span class="string">"some_symbol_name"</span>)}.unwrap();
+    <span class="macro">println!</span>(<span class="string">"fun(1.0) = {}"</span>, <span class="kw">unsafe</span>{fun(<span class="number">1.0</span>)});
+
+    <span class="comment">//this would not compile because fun is a symbol borrowed from lib
+    //drop(lib);
+</span>}</code></pre></div>
+<p><strong>Note:</strong> All kind of objects from the <code>symbor</code> module implement the Deref or DerefMut trait.
+This means that you can use them as if you would use primitive types that they wrap.</p>
+<p>It also allows automatic loading of symbols into a structure.
+This is especially handy if you have a huge API with multiple symbols:</p>
+<h2 id="example-of-automatic-symbol-loading"><a class="doc-anchor" href="#example-of-automatic-symbol-loading">§</a>Example of automatic symbol loading</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::symbor::{Library, Symbol, Ref, PtrOrNull, SymBorApi};
+
+ <span class="attr">#[derive(SymBorApi)]
+ </span><span class="kw">struct </span>ExampleApi&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub </span>fun: Symbol&lt;<span class="lifetime">'a</span>, <span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(i32) -&gt; i32&gt;,
+    <span class="kw">pub </span>glob_i32: Ref&lt;<span class="lifetime">'a</span>, i32&gt;,
+    <span class="kw">pub </span>maybe_c_str: PtrOrNull&lt;<span class="lifetime">'a</span>, u8&gt;,
+    <span class="kw">pub </span>opt_fun: <span class="prelude-ty">Option</span>&lt;Symbol&lt;<span class="lifetime">'a</span>, <span class="kw">fn</span>()&gt;&gt;
+ }
+
+<span class="kw">fn </span>main(){
+    <span class="kw">let </span>lib = Library::open(<span class="string">"example.dll"</span>).expect(<span class="string">"Could not open library"</span>);
+    <span class="kw">let </span>api = <span class="kw">unsafe</span>{ExampleApi::load(<span class="kw-2">&amp;</span>lib)}.expect(<span class="string">"Could not load symbols"</span>);
+    <span class="macro">println!</span>(<span class="string">"fun(4)={}"</span>, <span class="kw">unsafe</span>{(api.fun)(<span class="number">4</span>)});
+    <span class="macro">println!</span>(<span class="string">"glob_i32={}"</span>, <span class="kw-2">*</span>api.glob_i32);
+    <span class="macro">println!</span>(<span class="string">"The pointer is null={}"</span>, api.maybe_c_str.is_null());
+    <span class="kw">match </span>api.opt_fun {
+        <span class="prelude-val">Some</span>(fun) =&gt; fun(),
+        <span class="prelude-val">None </span>=&gt; <span class="macro">println!</span>(<span class="string">"Optional function not found in the library"</span>)
+    }
+
+    <span class="comment">//this would not compile:
+    //drop(lib);
+</span>}</code></pre></div>
+<p><strong>Note:</strong> You can obtain optional symbols (<code>Option&lt;Symbol&lt;T&gt;&gt;</code>).
+This is very useful when you are dealing with
+different versions of libraries and the newer versions support more functions.
+If it is not possible to obtain the given symbol, the option is set to `None’,
+otherwise it contains the obtained symbol.</p>
+<p>Unfortunately in Rust it is not possible to create an API for dynamic link libraries that would
+be 100% safe. This API aims to be 99% safe by providing zero cost wrappers around raw symbols.
+However it is possible to make a mistake if you dereference safe wrappers into raw symbols.</p>
+<p>#Example of a mistake - dangling symbol</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dlopen2::symbor::Library;
+<span class="kw">fn </span>main(){
+    <span class="kw">let </span>raw_fun = {
+        <span class="kw">let </span>lib = Library::open(<span class="string">"libexample.dylib"</span>).unwrap();
+        <span class="kw">let </span>safe_fun = <span class="kw">unsafe</span>{
+            lib.symbol::&lt;<span class="kw">unsafe extern </span><span class="string">"C" </span><span class="kw">fn</span>(f64)-&gt;f64&gt;(<span class="string">"some_symbol_name"</span>)
+        }.unwrap();
+        <span class="kw-2">*</span>safe_fun
+    };
+
+    <span class="comment">//raw_fun is now a dangling symbol
+</span>}</code></pre></div>
+<p>Original idea for this solution comes from Simonas Kazlauskas and his crate
+<a href="https://github.com/nagisa/rust_libloading">libloading</a>.
+Many improvements were added to solve several issues.</p>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Container.html" title="struct dlopen2::symbor::Container">Container</a></dt><dd>Container for both dynamic link library handle and its API.</dd><dt><a class="struct" href="struct.Library.html" title="struct dlopen2::symbor::Library">Library</a></dt><dd>Safe wrapper around dynamic link library handle.</dd><dt><a class="struct" href="struct.PtrOrNull.html" title="struct dlopen2::symbor::PtrOrNull">PtrOr<wbr>Null</a></dt><dd>Safe wrapper around const pointer.</dd><dt><a class="struct" href="struct.PtrOrNullMut.html" title="struct dlopen2::symbor::PtrOrNullMut">PtrOr<wbr>Null<wbr>Mut</a></dt><dd>Safe wrapper around mutable pointer.</dd><dt><a class="struct" href="struct.Ref.html" title="struct dlopen2::symbor::Ref">Ref</a></dt><dd>Safe wrapper around cont reference.</dd><dt><a class="struct" href="struct.RefMut.html" title="struct dlopen2::symbor::RefMut">RefMut</a></dt><dd>Safe wrapper around mutable reference.</dd><dt><a class="struct" href="struct.Symbol.html" title="struct dlopen2::symbor::Symbol">Symbol</a></dt><dd>Safe wrapper around a symbol obtained from <code>Library</code>.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.FromRawResult.html" title="trait dlopen2::symbor::FromRawResult">From<wbr>RawResult</a></dt><dd>Allows conversion of raw symbol result into the given symbol.</dd><dt><a class="trait" href="trait.SymBorApi.html" title="trait dlopen2::symbor::SymBorApi">SymBor<wbr>Api</a></dt><dd>Trait for automatic loading of symbols from library.</dd></dl><h2 id="derives" class="section-header">Derive Macros<a href="#derives" class="anchor">§</a></h2><dl class="item-table"><dt><a class="derive" href="derive.SymBorApi.html" title="derive dlopen2::symbor::SymBorApi">SymBor<wbr>Api</a></dt></dl></section></div></main></body></html>

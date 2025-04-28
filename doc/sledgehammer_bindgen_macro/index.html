@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="What is Sledgehammer Bindgen?"><title>sledgehammer_bindgen_macro - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sledgehammer_bindgen_macro" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sledgehammer_bindgen_macro/index.html">sledgehammer_<wbr>bindgen_<wbr>macro</a><span class="version">0.6.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#what-is-sledgehammer-bindgen" title="What is Sledgehammer Bindgen?">What is Sledgehammer Bindgen?</a></li><li><a href="#how-does-this-compare-to-wasm-bindgen" title="How does this compare to wasm-bindgen:">How does this compare to wasm-bindgen:</a></li><li><a href="#why-is-it-fast" title="Why is it fast?">Why is it fast?</a><ul><li><a href="#string-decoding" title="String decoding">String decoding</a></li><li><a href="#string-caching" title="String Caching">String Caching</a></li><li><a href="#byte-encoded-operations" title="Byte encoded operations">Byte encoded operations</a></li></ul></li></ul><h3><a href="#attributes">Crate Items</a></h3><ul class="block"><li><a href="#attributes" title="Attribute Macros">Attribute Macros</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>sledgehammer_bindgen_macro</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sledgehammer_bindgen_macro/lib.rs.html#1-736">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><div align="center">
+ <h1>sledgehammer bindgen</h1>
+ </div>
+ <div align="center">
+   <!-- Crates version -->
+   <a href="https://crates.io/crates/sledgehammer_bindgen">
+     <img src="https://img.shields.io/crates/v/sledgehammer_bindgen.svg?style=flat-square"
+     alt="Crates.io version" />
+   </a>
+   <!-- Downloads -->
+   <a href="https://crates.io/crates/sledgehammer_bindgen">
+     <img src="https://img.shields.io/crates/d/sledgehammer_bindgen.svg?style=flat-square"
+       alt="Download" />
+   </a>
+   <!-- docs -->
+   <a href="https://docs.rs/sledgehammer_bindgen">
+     <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square"
+       alt="docs.rs docs" />
+   </a>
+ </div>
+<h2 id="what-is-sledgehammer-bindgen"><a class="doc-anchor" href="#what-is-sledgehammer-bindgen">§</a>What is Sledgehammer Bindgen?</h2>
+<p>Sledgehammer bindgen provides faster rust batched bindings into javascript code.</p>
+<h2 id="how-does-this-compare-to-wasm-bindgen"><a class="doc-anchor" href="#how-does-this-compare-to-wasm-bindgen">§</a>How does this compare to wasm-bindgen:</h2>
+<ul>
+<li>
+<p>wasm-bindgen is a lot more general it allows returning values and passing around a lot more different types of values. For most users wasm-bindgen is a beter choice. Sledgehammer bindgen is specifically that want low-level, fast access to javascript.</p>
+</li>
+<li>
+<p>You can use sledgehammer bindgen with wasm-bindgen. See the docs and examples for more information.</p>
+</li>
+</ul>
+<h2 id="why-is-it-fast"><a class="doc-anchor" href="#why-is-it-fast">§</a>Why is it fast?</h2><h3 id="string-decoding"><a class="doc-anchor" href="#string-decoding">§</a>String decoding</h3>
+<ul>
+<li>
+<p>Decoding strings are expensive to decode, but the cost doesn’t change much with the size of the string. Wasm-bindgen calls TextDecoder.decode for every string. Sledgehammer only calls TextEncoder.decode once per batch.</p>
+</li>
+<li>
+<p>If the string is small, it is faster to decode the string in javascript to avoid the constant overhead of TextDecoder.decode</p>
+</li>
+<li>
+<p>See this benchmark: <a href="https://jsbench.me/4vl97c05lb/5">https://jsbench.me/4vl97c05lb/5</a></p>
+</li>
+</ul>
+<h3 id="string-caching"><a class="doc-anchor" href="#string-caching">§</a>String Caching</h3>
+<ul>
+<li>You can cache strings in javascript to avoid decoding the same string multiple times.</li>
+<li>If the string is static the string will be hashed by pointer instead of by value which is significantly faster.</li>
+</ul>
+<h3 id="byte-encoded-operations"><a class="doc-anchor" href="#byte-encoded-operations">§</a>Byte encoded operations</h3>
+<ul>
+<li>
+<p>Every operation is encoded as a sequence of bytes packed into an array. Every operation takes 1 byte plus whatever data is required for it.</p>
+</li>
+<li>
+<p>Each operation is encoded in a batch of four as a u32. Getting a number from an array buffer has a high constant cost, but getting a u32 instead of a u8 is not more expensive. Sledgehammer bindgen reads the u32 and then splits it into the 4 individual bytes. It will shuffle and pack the bytes into as few buckets as possible and try to inline reads into the javascript.</p>
+</li>
+<li>
+<p>See this benchmark: <a href="https://jsbench.me/csl9lfauwi/2">https://jsbench.me/csl9lfauwi/2</a></p>
+</li>
+</ul>
+</div></details><h2 id="attributes" class="section-header">Attribute Macros<a href="#attributes" class="anchor">§</a></h2><dl class="item-table"><dt><a class="attr" href="attr.bindgen.html" title="attr sledgehammer_bindgen_macro::bindgen">bindgen</a></dt><dd>Generates bindings for batched calls to js functions. The generated code is a Buffer struct with methods for each function.</dd></dl></section></div></main></body></html>

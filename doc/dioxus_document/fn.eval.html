@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Evaluate some javascript in the current document"><title>eval in dioxus_document - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="dioxus_document" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../dioxus_document/index.html">dioxus_<wbr>document</a><span class="version">0.6.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">eval</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#communicating-with-javascript" title="Communicating with JavaScript">Communicating with JavaScript</a><ul><li><a href="#safety" title="Safety">Safety</a></li><li><a href="#sending-data-to-javascript" title="Sending data to JavaScript">Sending data to JavaScript</a></li><li><a href="#sending-data-from-javascript" title="Sending data from JavaScript">Sending data from JavaScript</a></li><li><a href="#interacting-with-the-dom-with-eval" title="Interacting with the DOM with Eval">Interacting with the DOM with Eval</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate dioxus_<wbr>document</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">dioxus_document</a></div><h1>Function <span class="fn">eval</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/dioxus_document/lib.rs.html#29-31">Source</a> </span></div><pre class="rust item-decl"><code>pub fn eval(script: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.86.0/std/primitive.str.html">str</a>) -&gt; <a class="struct" href="struct.Eval.html" title="struct dioxus_document::Eval">Eval</a></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Evaluate some javascript in the current document</p>
+<h2 id="communicating-with-javascript"><a class="doc-anchor" href="#communicating-with-javascript">§</a>Communicating with JavaScript</h2>
+<p>You can use the <code>eval</code> function to execute JavaScript code in your application with the desktop, mobile, web or liveview renderers. Eval takes a block of JavaScript code (that may be asynchronous) and returns a <code>Eval</code> object that you can use to send data to the JavaScript code and receive data from it.</p>
+<div class="warning">
+<h3 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h3>
+<p>Please be careful when executing JavaScript code with <code>eval</code>. You should only execute code that you trust. <strong>This applies especially to web targets, where the JavaScript context has access to most, if not all of your application data.</strong> Running untrusted code can lead to a <a href="https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting">cross-site scripting</a> (XSS) vulnerability.</p>
+</div>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw">async move </span>{
+                <span class="comment">// Eval is a global function you can use anywhere inside Dioxus. It will execute the given JavaScript code.
+                </span><span class="kw">let </span>result = document::eval(<span class="string">r#"console.log("Hello World");
+                return "Hello World";"#</span>);
+
+                <span class="comment">// You can use the `await` keyword to wait for the result of the JavaScript code.
+                </span><span class="macro">println!</span>(<span class="string">"{:?}"</span>, result.<span class="kw">await</span>);
+            },
+            <span class="string">"Log Hello World"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="sending-data-to-javascript"><a class="doc-anchor" href="#sending-data-to-javascript">§</a>Sending data to JavaScript</h3>
+<p>When you execute JavaScript code with <code>eval</code>, you can pass data to it by formatting the value into the JavaScript code or sending values to the <code>Eval</code> channel.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>app() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="comment">// You can pass initial data to the eval function by formatting it into the JavaScript code.
+                </span><span class="kw">const </span>LOOP_COUNT: usize = <span class="number">10</span>;
+                <span class="kw">let </span>eval = document::eval(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"for(let i = 0; i &lt; {LOOP_COUNT}; i++) {{
+                    // You can receive values asynchronously with the the `await dioxus.recv()` method.
+                    let value = await dioxus.recv();
+                    console.log("Received", value);
+                }}"#</span>));
+
+                <span class="comment">// You can send values from rust to the JavaScript code with the `send` method on the object returned by `eval`.
+                </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..LOOP_COUNT {
+                    eval.send(i).unwrap();
+                }
+            },
+            <span class="string">"Log Count"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="sending-data-from-javascript"><a class="doc-anchor" href="#sending-data-from-javascript">§</a>Sending data from JavaScript</h3>
+<p>The <code>Eval</code> struct also contains methods for receiving values you send from JavaScript. You can use the <code>dioxus.send()</code> method to send values to the JavaScript code and the <code>Eval::recv()</code> method to receive values from the JavaScript code.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">fn </span>app() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw">async move </span>{
+                <span class="comment">// You can send values from rust to the JavaScript code by using the `send` method on the object returned by `eval`.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>eval = document::eval(<span class="string">r#"for(let i = 0; i &lt; 10; i++) {
+                    // You can send values asynchronously with the `dioxus.send()` method.
+                    dioxus.send(i);
+                }"#</span>);
+
+                <span class="comment">// You can receive values from the JavaScript code with the `recv` method on the object returned by `eval`.
+                </span><span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
+                    <span class="kw">let </span>value: i32 = eval.recv().<span class="kw">await</span>.unwrap();
+                    <span class="macro">println!</span>(<span class="string">"Received {}"</span>, value);
+                }
+            },
+            <span class="string">"Log Count"
+        </span>}
+    }
+}</code></pre></div>
+<h3 id="interacting-with-the-dom-with-eval"><a class="doc-anchor" href="#interacting-with-the-dom-with-eval">§</a>Interacting with the DOM with Eval</h3>
+<p>You can also use the <code>eval</code> function to execute JavaScript code that reads or modifies the DOM. If you want to interact with the mounted DOM, you need to use <code>eval</code> inside the [<code>dioxus_hooks::use_effect</code>] hook which runs after the component has been mounted.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>dioxus::prelude::<span class="kw-2">*</span>;
+
+<span class="kw">const </span>SCRIPT: <span class="kw-2">&amp;</span>str = <span class="string">r#"
+    let element = document.getElementById("my-element");
+    element.innerHTML = "Hello World";
+    return element.getAttribute("data-count");
+"#</span>;
+
+<span class="kw">fn </span>app() -&gt; Element {
+    <span class="comment">// ❌ You shouldn't run eval in the body of a component. This will run before the component has been mounted
+    // document::eval(SCRIPT);
+
+    // ✅ You should run eval inside an effect or event. This will run after the component has been mounted
+    </span>use_effect(<span class="kw">move </span>|| {
+        spawn(<span class="kw">async </span>{
+            <span class="kw">let </span>count = document::eval(SCRIPT).<span class="kw">await</span>;
+            <span class="macro">println!</span>(<span class="string">"Count is {:?}"</span>, count);
+        });
+    });
+
+
+    <span class="macro">rsx!</span> {
+        div {
+            id: <span class="string">"my-element"</span>,
+            <span class="string">"data-count"</span>: <span class="string">"123"</span>,
+        }
+    }
+}</code></pre></div>
+</div></details></section></div></main></body></html>

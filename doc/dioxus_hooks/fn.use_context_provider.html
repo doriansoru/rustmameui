@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Provide some context via the tree and return a reference to it"><title>use_context_provider in dioxus_hooks - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-6c3ea77c.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="dioxus_hooks" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0 (05f9846f8 2025-03-31)" data-channel="1.86.0" data-search-js="search-581efc7a.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-3a5871a4.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-4d63596a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://avatars.githubusercontent.com/u/79236386"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../dioxus_hooks/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../dioxus_hooks/index.html"><img src="https://avatars.githubusercontent.com/u/79236386" alt="logo"></a><h2><a href="../dioxus_hooks/index.html">dioxus_<wbr>hooks</a><span class="version">0.6.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">use_<wbr>context_<wbr>provider</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#additional-information-that-may-be-useful" title="Additional Information that may be useful">Additional Information that may be useful</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate dioxus_<wbr>hooks</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">dioxus_hooks</a></div><h1>Function <span class="fn">use_context_provider</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/dioxus_hooks/use_context.rs.html#65-67">Source</a> </span></div><pre class="rust item-decl"><code>pub fn use_context_provider&lt;T: 'static + <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a>&gt;(f: impl <a class="trait" href="https://doc.rust-lang.org/1.86.0/core/ops/function/trait.FnOnce.html" title="trait core::ops::function::FnOnce">FnOnce</a>() -&gt; T) -&gt; T</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Provide some context via the tree and return a reference to it</p>
+<p>Once the context has been provided, it is immutable. Mutations should be done via interior mutability.
+Context can be read by any child components of the context provider, and is a solution to prop
+drilling, using a context provider with a Signal inside is a good way to provide global/shared
+state in your app:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>app() -&gt; Element {
+   use_context_provider(|| Signal::new(<span class="number">0</span>));
+   <span class="macro">rsx!</span> { Child {} }
+}
+<span class="comment">// This component does read from the signal, so when the signal changes it will rerun
+</span><span class="attr">#[component]
+</span><span class="kw">fn </span>Child() -&gt; Element {
+    <span class="kw">let </span><span class="kw-2">mut </span>signal: Signal&lt;i32&gt; = use_context();
+    <span class="macro">rsx!</span> {
+        button { onclick: <span class="kw">move </span>|<span class="kw">_</span>| signal += <span class="number">1</span>, <span class="string">"increment context" </span>}
+        p {<span class="string">"{signal}"</span>}
+    }
+}</code></pre></div>
+<h3 id="additional-information-that-may-be-useful"><a class="doc-anchor" href="#additional-information-that-may-be-useful">§</a>Additional Information that may be useful</h3><details>
+<summary>This function is a hook which means you need to <b>follow the rules of hooks</b> when you call it. You can click here to learn more about the rules of hooks.</summary>
+<p>Hooks in dioxus need to run in the same order every time you run the component. To make sure you run hooks in a consistent order, you should follow the rules of hooks:</p>
+<ol>
+<li>Hooks should only be called from the root of a component or another hook</li>
+</ol>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="comment">// ✅ You can call hooks from the body of a component
+    </span><span class="kw">let </span>number = use_signal(|| <span class="number">1</span>);
+    <span class="kw">if </span>number() == <span class="number">1 </span>{
+        <span class="comment">// ❌ You can run into issues if you can hooks inside other expressions inside your component
+        // If number changes from 0 to 1, the order of the hooks will be different and your app may panic
+        </span><span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+    }
+
+    <span class="macro">todo!</span>()
+}
+
+<span class="kw">fn </span>use_my_hook() -&gt; Signal&lt;i32&gt; {
+    <span class="comment">// ✅ You can call hooks from the body of other hooks
+    </span><span class="kw">let </span>number = use_signal(|| <span class="number">1</span>);
+    <span class="comment">// ❌ Again, creating hooks inside expressions inside other hooks can cause issues
+    </span><span class="kw">if </span>number() == <span class="number">1 </span>{
+        <span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+    }
+
+    number
+}</code></pre></div>
+<ol start="2">
+<li>Hooks should always start with <code>use_</code> to make it clear that you need to call them in a consistent order</li>
+</ol>
+<p>Because hooks should only be called from the root of a component or another hook, you shouldn’t call hooks inside of:</p>
+<ul>
+<li>❌ Conditionals</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>number = use_signal(|| <span class="number">1</span>);
+    <span class="comment">// ❌ Changing the condition will change the order of the hooks
+    </span><span class="kw">if </span>number() == <span class="number">1 </span>{
+        <span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+    }
+
+    <span class="comment">// ❌ Changing the value you are matching will change the order of the hooks
+    </span><span class="kw">match </span>number() {
+        <span class="number">1 </span>=&gt; {
+            <span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+        },
+        <span class="kw">_ </span>=&gt; (),
+    }
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<ul>
+<li>❌ Loops</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>number = use_signal(|| <span class="number">1</span>);
+    <span class="comment">// ❌ Changing the loop will change the order of the hooks
+    </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..number() {
+        <span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+    }
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<ul>
+<li>❌ Event Handlers</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="comment">// ❌ Calling the event handler will change the order of the hooks
+                </span>use_signal(|| <span class="string">"hello world"</span>.to_string());
+            },
+            <span class="string">"Click me"
+        </span>}
+    }
+}</code></pre></div>
+<ul>
+<li>❌ Initialization closures in other hooks</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>number = use_signal(|| {
+        <span class="comment">// ❌ This closure will only be called when the component is first created. Running the component will change the order of the hooks
+        </span><span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string());
+        string()
+    });
+
+    <span class="macro">todo!</span>()
+}</code></pre></div>
+<details>
+<summary>Why do hooks need to run in a consistent order?</summary>
+<p>Hooks need to be run in a consistent order because dioxus stores hooks in a list and uses the order you run hooks in to determine what part of the state belongs to which hook.</p>
+<p>Lets look at an example component:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>App() -&gt; Element {
+    <span class="kw">let </span>number = use_signal(|| <span class="number">1</span>); <span class="comment">// Hook 1
+    </span><span class="kw">let </span>string = use_signal(|| <span class="string">"hello world"</span>.to_string()); <span class="comment">// Hook 2
+    </span><span class="kw">let </span>doubled = use_memo(<span class="kw">move </span>|| number() * <span class="number">2</span>); <span class="comment">// Hook 3
+
+    </span><span class="macro">todo!</span>()
+}</code></pre></div>
+<p>When we first create the component, we run the hooks in the order they are defined and store the state in the component in a list.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>[
+    Box::new(<span class="number">1</span>),
+    Box::new(<span class="string">"hello world"</span>.to_string()),
+    Box::new(<span class="number">2</span>),
+]</code></pre></div>
+<p>Next time we run the component, we return items from the state list instead of creating state again.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>[
+    Box::new(<span class="number">1</span>), <span class="comment">// Hook 1 returns 1
+    </span>Box::new(<span class="string">"hello world"</span>.to_string()), <span class="comment">// Hook 2 returns "hello world"
+    </span>Box::new(<span class="number">2</span>), <span class="comment">// Hook 3 returns 2
+</span>]</code></pre></div>
+<p>The order the hooks are run it must be the same because the order determines which hook gets what state! If you run the hooks in a different order, dioxus may panic because it can’t turn the state back into the right type or you may just get the wrong state for your hook.</p>
+</details>
+</details>
+<details>
+<summary>How should I move around state? (Click here to learn more about moving around and sharing state in Dioxus)</summary>
+<p>You will often need to move state around between your components. Dioxus provides three different ways to pass around state:</p>
+<ol>
+<li>Just pass your values as <a href="https://dioxuslabs.com/learn/0.6/reference/component_props">props</a>:</li>
+</ol>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">fn </span>MyComponent() -&gt; Element {
+    <span class="kw">let </span>count = use_signal(|| <span class="number">0</span>);
+
+    <span class="macro">rsx!</span> {
+        IncrementButton {
+            count
+        }
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>IncrementButton(<span class="kw-2">mut </span>count: Signal&lt;i32&gt;) -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| count += <span class="number">1</span>,
+            <span class="string">"Increment"
+        </span>}
+    }
+}</code></pre></div>
+<p>This is the most common way to pass state around. It is the most explicit and local to your component. Use this when it isn’t overly annoying to pass around a value.</p>
+<ol start="2">
+<li>Use <a href="https://dioxuslabs.com/learn/0.6/reference/context">use_context</a> to pass state from a parent component to all children:</li>
+</ol>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Clone, Copy)]
+</span><span class="kw">struct </span>MyState {
+    count: Signal&lt;i32&gt;
+}
+
+<span class="kw">fn </span>ParentComponent() -&gt; Element {
+    <span class="comment">// Use context provider provides an unique type to all children of this component
+    </span>use_context_provider(|| MyState { count: Signal::new(<span class="number">0</span>) });
+
+    <span class="macro">rsx!</span> {
+        <span class="comment">// IncrementButton will have access to the count without explicitly passing it through props
+        </span>IncrementButton {}
+    }
+}
+
+<span class="attr">#[component]
+</span><span class="kw">fn </span>IncrementButton() -&gt; Element {
+    <span class="comment">// Use context gets the value from a parent component
+    </span><span class="kw">let </span><span class="kw-2">mut </span>count = use_context::&lt;MyState&gt;().count;
+
+    <span class="macro">rsx!</span> {
+        button {
+            onclick: <span class="kw">move </span>|<span class="kw">_</span>| count += <span class="number">1</span>,
+            <span class="string">"Increment"
+        </span>}
+    }
+}</code></pre></div>
+<p>This is slightly less explicit than passing it as a prop, but it is still local to the component. This is really great if you want state that is global to part of your app. It lets you create multiple global-ish states while still making state different when you reuse components. If I create a new <code>ParentComponent</code>, it will have a new <code>MyState</code>.</p>
+<ol start="3">
+<li>Globals let you share state with your whole app with rust statics:</li>
+</ol>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// Count will be created the first time you access it with the closure you pass to Signal::global
+</span><span class="kw">static </span>COUNT: GlobalSignal&lt;i32&gt; = Signal::global(|| <span class="number">0</span>);
+
+<span class="kw">fn </span>ParentComponent() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        IncrementButton {}
+    }
+}
+
+<span class="kw">fn </span>IncrementButton() -&gt; Element {
+    <span class="macro">rsx!</span> {
+        button {
+            <span class="comment">// You don't need to pass anything around or get anything out of the context because COUNT is global
+            </span>onclick: <span class="kw">move </span>|<span class="kw">_</span>| <span class="kw-2">*</span>COUNT.write() += <span class="number">1</span>,
+            <span class="string">"Increment"
+        </span>}
+    }
+}</code></pre></div>
+<p>Global state can be very ergonomic if your state is truly global, but you shouldn’t use it if you need state to be different for different instances of your component. If I create another <code>IncrementButton</code> it will use the same <code>COUNT</code>. Libraries should generally avoid this to make components more reusable.</p>
+<blockquote>
+<p>Note: Even though it is in a static, <code>COUNT</code> will be different for each app instance (this is generally only reliant on the server).</p>
+</blockquote>
+</details></div></details></section></div></main></body></html>
