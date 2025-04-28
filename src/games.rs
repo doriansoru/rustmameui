@@ -137,12 +137,11 @@ pub fn verify_batch_roms(config: &Config, roms: &[String]) -> Vec<bool> {
     let output = Command::new(&config.mame_executable)
         .args(command.get_args())
         .output()
-        .map_err(|e| {
+        .inspect_err(|e| {
             eprintln!("{}",
                 t!("error_while_executing.mame_executable.error", mame_executable = config.mame_executable.display().to_string(), error = e.to_string())
                 //"Error while executing '{} -verifyroms': {}", config.mame_executable.display(), e
             );
-            e
         })
         .unwrap_or_else(|_| std::process::Output {
             stdout: vec![],
@@ -205,7 +204,7 @@ pub fn verify_batch_snaps(config: &Config, roms: &[String]) -> Vec<bool> {
         },
         Err(_) => {
             eprintln!("{}",
-                t!("cannot_open_the_snaps_file").to_string()
+                t!("cannot_open_the_snaps_file")
                 //"Cannot open the snaps file."
             );
             return vec![false; roms.len()];
@@ -328,7 +327,7 @@ pub fn add_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -
         Ok(f) => f,
         Err(e) => {
             eprintln!("{}",
-                t!("error_while_creating_the_favourites_file.error", error = e.to_string()).to_string()
+                t!("error_while_creating_the_favourites_file.error", error = e.to_string())
                 //"Error while creating the favourites file: {}", e
             );
             return favourites.clone();
@@ -338,14 +337,14 @@ pub fn add_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -
         Ok(json_string) => {
             if let Err(e) = file.write_all(json_string.as_bytes()) {
                 eprintln!("{}",
-                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string()).to_string()
+                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
                     //"Error while writing to the favourites file: {}", e
                 );
             }
         }
         Err(e) => {
             eprintln!("{}",
-                t!("error_while_serializing_the_favourites.error", error = e.to_string()).to_string()
+                t!("error_while_serializing_the_favourites.error", error = e.to_string())
                 //"Error while serializing the favourites: {}", e
             );
         }
@@ -384,7 +383,7 @@ pub fn remove_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game
         Ok(f) => f,
         Err(e) => {
             eprintln!("{}",
-                t!("error_while_creating_the_favourites_file.error", error = e.to_string()).to_string()
+                t!("error_while_creating_the_favourites_file.error", error = e.to_string())
                 //"Error while creating the favourites file: {}", e
             );
             return favourites.clone();
@@ -394,7 +393,7 @@ pub fn remove_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game
         Ok(json_string) => {
             if let Err(e) = file.write_all(json_string.as_bytes()) {
                 eprintln!("{}",
-                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string()).to_string()
+                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
                     //"Error while writing to the favourites file: {}", e
                 );
             }

@@ -417,19 +417,38 @@ fn App() -> Element {
                                                 onclick: move |_| {
                                                     // Load config again (potentially redundant if config is stable)
                                                     let config = Config::new().unwrap();
+                                                    // Get the currently selected favourite from the signal.
+                                                    // Note: This uses `selected_game()` which might be a copy-paste error
+                                                    // and perhaps intended to use `selected_favourite()`.
+                                                    let (rom, description, snap) = selected_game();
+                                                    let game = Game::new(&rom, &description, snap); // Create Game instance
+                                                    let _ = game.launch(&config.mame_executable, &config.roms_path);
+                                                    // Hide the context menu after action
+                                                    show_context_menu.set(false);
+                                                },
+                                                // Display the calculated context menu label for favourites
+                                                {t!("launch_game")}
+                                            }      
+                                            // The context menu item (clickable div)
+                                            div {
+                                                style: "cursor: pointer; padding: 10px;", // Styling for the item
+
+                                                // Event handler for clicking the context menu item
+                                                onclick: move |_| {
+                                                    // Load config again (potentially redundant if config is stable)
+                                                    let config = Config::new().unwrap();
                                                     // Get the currently selected game from the signal
                                                     let (rom, description, snap) = selected_game();
                                                     let favourite = Game::new(&rom, &description, snap); // Create Game instance
 
-                                                    let new_favourites;
                                                     // Check if the selected game is currently a favourite
-                                                    if selected_game_is_favourite() {
+                                                    let new_favourites = if selected_game_is_favourite() {
                                                         // If yes, remove it from favourites
-                                                        new_favourites = crate::games::remove_favourite(&config, &mut favourites(), &favourite);
+                                                        crate::games::remove_favourite(&config, &mut favourites(), &favourite)
                                                     } else {
                                                         // If no, add it to favourites
-                                                        new_favourites = crate::games::add_favourite(&config, &mut favourites(), &favourite);
-                                                    }
+                                                        crate::games::add_favourite(&config, &mut favourites(), &favourite)
+                                                    };
                                                     // Update the favourites signal with the new list
                                                     favourites.set(new_favourites);
                                                     // Hide the context menu after action
@@ -585,23 +604,38 @@ fn App() -> Element {
                                                 onclick: move |_| {
                                                     // Load config again (potentially redundant if config is stable)
                                                     let config = Config::new().unwrap();
-                                                    // Get the currently selected game/favourite from the signal.
+                                                    // Get the currently selected favourite from the signal.
                                                     // Note: This uses `selected_game()` which might be a copy-paste error
                                                     // and perhaps intended to use `selected_favourite()`.
-                                                    let (rom, description, snap) = selected_game();
+                                                    let (rom, description, snap) = selected_favourite();
+                                                    let favourite = Game::new(&rom, &description, snap); // Create Game instance
+                                                    let _ = favourite.launch(&config.mame_executable, &config.roms_path);
+                                                    // Hide the context menu after action
+                                                    show_context_menu.set(false);
+                                                },
+                                                // Display the calculated context menu label for favourites
+                                                {t!("launch_game")}
+                                            }                                            
+                                            div {
+                                                style: "cursor: pointer; padding: 10px;", // Styling for the item
+
+                                                // Event handler for clicking the context menu item
+                                                onclick: move |_| {
+                                                    // Load config again (potentially redundant if config is stable)
+                                                    let config = Config::new().unwrap();
+                                                    
+                                                    // Get the currently selected favourite from the signal.
+                                                    let (rom, description, snap) = selected_favourite();
                                                     let favourite = Game::new(&rom, &description, snap); // Create Game instance
 
-                                                    let new_favourites;
                                                     // Check if the selected item is currently a favourite.
-                                                    // Note: This uses `selected_favourite_is_favourite()` which
-                                                    // is likely correct for the Favourites tab context menu.
-                                                    if selected_favourite_is_favourite() {
+                                                    let new_favourites = if selected_favourite_is_favourite() {
                                                         // If yes, remove it from favourites
-                                                        new_favourites = crate::games::remove_favourite(&config, &mut favourites(), &favourite);
+                                                        crate::games::remove_favourite(&config, &mut favourites(), &favourite)
                                                     } else {
                                                         // If no, add it to favourites
-                                                        new_favourites = crate::games::add_favourite(&config, &mut favourites(), &favourite);
-                                                    }
+                                                        crate::games::add_favourite(&config, &mut favourites(), &favourite)
+                                                    };
                                                     // Update the favourites signal with the new list
                                                     favourites.set(new_favourites);
                                                     // Hide the context menu after action
@@ -853,20 +887,16 @@ fn App() -> Element {
                                     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                                     // Get XML output from MAME. Panics on error.
-                                    let xml_string = crate::games::get_xml_roms(&config_third_clone).expect(
-                                        t!("cannot_get_xml_data_from_mame").to_string().as_str()
-                                        //"Cannot get xml data from mame"
-                                    );
+                                    let xml_string = crate::games::get_xml_roms(&config_third_clone)
+                                        .unwrap_or_else(|_| { panic!("{}", t!("cannot_get_xml_data_from_mame").to_string()) });
                                     // Update status
                                     status.set("Parsing the roms list to get valid roms...".into());
                                     // Small delay
                                     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                                     // Parse XML and get ROM names and descriptions. Panics on error.
-                                    let (roms, descriptions) = crate::games::get_all_roms(&config_third_clone, &xml_string).expect(
-                                        t!("cannot_read_all_roms_and_their_descriptions").to_string().as_str()
-                                        //"Cannot read all roms and their descriptions"
-                                    );
+                                    let (roms, descriptions) = crate::games::get_all_roms(&config_third_clone, &xml_string)
+                                        .unwrap_or_else(|_| { panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string()) });
                                     let mut all_games: Vec<Game> = Vec::new();
 
                                     // Update status

@@ -86,6 +86,9 @@ favourites:
 games:
   en: Games
   it: Giochi
+launch_game:
+  en: Launch game
+  it: Avvia gioco
 mame_executable_path:
   en: Mame executable path
   it: Percorso dell'eseguibile Mame

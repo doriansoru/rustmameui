@@ -64,10 +64,7 @@ impl Config {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Get the package name
         let package_name = env!("CARGO_PKG_NAME");
-        let config_dir = dirs::config_dir().expect(
-            t!("cannot_get_the_system_configuration_directory").to_string().as_str()
-            //"Cannot get the system configuration directory."
-        );
+        let config_dir = dirs::config_dir().unwrap_or_else(|| { panic!("{}", t!("cannot_get_the_system_configuration_directory").to_string()) });
 
         // Create the path of the configuration directory for this app
         let project_config_dir = config_dir.join(package_name);
@@ -75,10 +72,7 @@ impl Config {
         // Create this app configuration directory if it does not exist
         if !project_config_dir.exists() {
             // Create the project configuration directory
-            std::fs::create_dir_all(&project_config_dir).expect(
-                t!("cannot_create_the_app_configuration_directory").to_string().as_str()
-                //"Cannot create the app configuration directory."
-            );
+            std::fs::create_dir_all(&project_config_dir).unwrap_or_else(|_| { panic!("{}", t!("cannot_create_the_app_configuration_directory").to_string()) });
         }
 
         let mut config_file = project_config_dir.join(package_name);
