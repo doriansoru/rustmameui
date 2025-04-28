@@ -6,6 +6,7 @@ use quick_xml::events::Event;
 use crate::rustmameuiconfig::Config;
 use crate::game::Game;
 use std::io::BufReader;
+use rust_i18n::t;
 
 pub fn get_xml_roms(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new(&config.mame_executable)
@@ -83,7 +84,10 @@ pub fn verify_batch_roms(config: &Config, roms: &[String]) -> Vec<bool> {
         .args(command.get_args())
         .output()
         .map_err(|e| {
-            eprintln!("Error executing '{} -verifyroms': {}", config.mame_executable.display(), e);
+            eprintln!("{}",
+                t!("error_while_executing.mame_executable.error", mame_executable = config.mame_executable.display().to_string(), error = e.to_string())
+                //"Error while executing '{} -verifyroms': {}", config.mame_executable.display(), e
+            );
             e
         })
         .unwrap_or_else(|_| std::process::Output {
@@ -125,7 +129,10 @@ pub fn verify_batch_snaps(config: &Config, roms: &[String]) -> Vec<bool> {
 
         },
         Err(_) => {
-            eprintln!("Cannot open the snaps file.");
+            eprintln!("{}",
+                t!("cannot_open_the_snaps_file").to_string()
+                //"Cannot open the snaps file."
+            );
             return vec![false; roms.len()];
         }
     }
@@ -177,18 +184,27 @@ pub fn add_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -
     let mut file = match std::fs::File::create(favourites_file) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("Error creating favourites file: {}", e);
+            eprintln!("{}",
+                t!("error_while_creating_the_favourites_file.error", error = e.to_string()).to_string()
+                //"Error while creating the favourites file: {}", e
+            );
             return favourites.clone();
         }
     };
     match serde_json::to_string_pretty(favourites) {
         Ok(json_string) => {
             if let Err(e) = file.write_all(json_string.as_bytes()) {
-                eprintln!("Error writing to favourites file: {}", e);
+                eprintln!("{}",
+                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string()).to_string()
+                    //"Error while writing to the favourites file: {}", e
+                );
             }
         }
         Err(e) => {
-            eprintln!("Error serializing favourites: {}", e);
+            eprintln!("{}",
+                t!("error_while_serializing_the_favourites.error", error = e.to_string()).to_string()
+                //"Error while serializing the favourites: {}", e
+            );
         }
     }
     sort(favourites);
@@ -206,18 +222,27 @@ pub fn remove_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game
     let mut file = match std::fs::File::create(favourites_file) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("Error creating favourites file: {}", e);
+            eprintln!("{}",
+                t!("error_while_creating_the_favourites_file.error", error = e.to_string()).to_string()
+                //"Error while creating the favourites file: {}", e
+            );
             return favourites.clone();
         }
     };
     match serde_json::to_string_pretty(favourites) {
         Ok(json_string) => {
             if let Err(e) = file.write_all(json_string.as_bytes()) {
-                eprintln!("Error writing to favourites file: {}", e);
+                eprintln!("{}",
+                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string()).to_string()
+                    //"Error while writing to the favourites file: {}", e
+                );
             }
         }
         Err(e) => {
-            eprintln!("Error serializing favourites: {}", e);
+            panic!("{}",
+                t!("error_while_serializing_the_favourites.error", error = e.to_string()).to_string()
+            );
+            //"Error while serializing the favourites: {}", e
         }
     }
     sort(favourites);

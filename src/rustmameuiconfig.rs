@@ -1,10 +1,11 @@
 use std::path::PathBuf;
+use rust_i18n::t;
 
 macro_rules! box_err {
     ($msg:expr) => {
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, $msg)))
     };
-    // Versione che accetta formato simile a format!
+    // A version thich accepts a format similar to format!
     ($fmt:expr, $($arg:tt)*) => {
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!($fmt, $($arg)*))))
     };
@@ -22,7 +23,10 @@ impl Config {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Get the package name
         let package_name = env!("CARGO_PKG_NAME");
-        let config_dir = dirs::config_dir().expect("Cannot get the system configuration directory.");
+        let config_dir = dirs::config_dir().expect(
+            t!("cannot_get_the_system_configuration_directory").to_string().as_str()
+            //"Cannot get the system configuration directory."
+        );
 
         // Create the path of the configuration directory for this app
         let project_config_dir = config_dir.join(package_name);
@@ -30,7 +34,10 @@ impl Config {
         // Create this app configuration directory if it does not exist
         if !project_config_dir.exists() {
             // Create the project configuration directory
-            std::fs::create_dir_all(&project_config_dir).expect("Cannot create the app configuration directory.");
+            std::fs::create_dir_all(&project_config_dir).expect(
+                t!("cannot_create_the_app_configuration_directory").to_string().as_str()
+                //"Cannot create the app configuration directory."
+            );
         }
 
         let mut config_file = project_config_dir.join(package_name);
@@ -63,21 +70,30 @@ impl Config {
         let mame_executable = match settings.get("mame_executable") {
             Some(v) => v,
             None => {
-                return box_err!("Cannot read the mame executable path from the configuration file");
+                return box_err!(
+                    t!("cannot_read_the_mame_executable_path_from_the_configuration_file")
+                    //"Cannot read the mame executable path from the configuration file"
+                );
             }
          };
 
         let roms_path = match settings.get("roms_path") {
             Some(v) => v,
             None => {
-                return box_err!("Cannot read the roms path from the configuration file");
+                return box_err!(
+                    t!("cannot_read_the_roms_path_from_the_configuration_file")
+                    //"Cannot read the roms path from the configuration file"
+                );
             }
         };
 
         let snap_file = match settings.get("snap_file") {
             Some(v) => v,
             None => {
-                return box_err!("Cannot read the snap file path from the configuration file");
+                return box_err!(
+                    t!("cannot_read_the_snaps_file_path_from_the_configuration_file")
+                    //"Cannot read the snap file path from the configuration file"
+                );
             }
         };
 

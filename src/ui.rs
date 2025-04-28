@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use crate::rustmameuiconfig::Config;
 use crate::game::Game;
 use rfd::FileDialog;
+use rust_i18n::t;
 
 const TABS_CSS: Asset = asset!("/assets/tabs.css");
 const ABOUT: Asset = asset!("/assets/about.svg");
@@ -39,7 +40,8 @@ fn check_dialog_utility() -> Result<(), String> {
     }
 
     if !found {
-        return Err("Error: No dialog utility has been found. Install 'zenity' or 'kdialog' to open the file chooser dialog.".to_string());
+        return Err(t!("error_no_dialog_utility").to_string());
+        //"Error: No dialog utility has been found. Install 'zenity' or 'kdialog' to open the file chooser dialog."
     }
 
     Ok(())
@@ -55,7 +57,10 @@ fn App() -> Element {
             c
         },
         Err(e) => {
-            panic!("{}", format!("Error: {}", e));
+            panic!("{}",
+                t!("error.error", error = e.to_string()).to_string()
+                //"{}", format!("Error: {}", e)
+            );
         }
     };
 
@@ -91,9 +96,40 @@ fn App() -> Element {
             .collect::<Vec<Game>>()
     });
     let mut status = use_signal(|| String::from(""));
+    let mut selected_game_popup_menu_label = use_signal(|| "".to_string());
+    let selected_game_popup_menu_current_label = use_memo(move || { 
+        selected_game_popup_menu_label()
+    });
 
-  
+    let selected_game_is_favourite = use_memo(move || {
+        let (rom, _, _) = selected_game();
+        let mut found = false;
+        for favourite in favourites() {
+            if favourite.rom() == rom {
+                found = true;
+            }
+        }
+        found
+    });
+
+    let mut selected_favourite_popup_menu_label = use_signal(|| "".to_string());
+    let selected_favourite_popup_menu_current_label = use_memo(move || { 
+        selected_favourite_popup_menu_label()
+    });
+
+    let selected_favourite_is_favourite = use_memo(move || {
+        let (rom, _, _) = selected_favourite();
+        let mut found = false;
+        for favourite in favourites() {
+            if favourite.rom() == rom {
+                found = true;
+            }
+        }
+        found
+    });
+
     let mut show_context_menu = use_signal(|| false);
+ 
     let mut menu_x = use_signal(|| 0_i32);
     let mut menu_y = use_signal(|| 0_i32);
 
@@ -122,24 +158,28 @@ fn App() -> Element {
                 button {
                     class: if selected_tab() == Tab::Games { "tab-button active" } else { "tab-button" },
                     onclick: move |_| selected_tab.set(Tab::Games),
-                    "Games"
+                    {t!("games")}
+                    //"Games"
                 }
                 button {
                     class: if selected_tab() == Tab::Favourites { "tab-button active" } else { "tab-button" },
                     onclick: move |_| {
                         selected_tab.set(Tab::Favourites);
                     },
-                    "Favourites"
+                    {t!("favourites")}
+                    //"Favourites"
                 }
                 button {
                     class: if selected_tab() == Tab::Settings { "tab-button active" } else { "tab-button" },
                     onclick: move |_| selected_tab.set(Tab::Settings),
-                    "Settings"
+                    {t!("settings")}
+                    //"Settings"
                 }
                 button {
                     class: if selected_tab() == Tab::About { "tab-button active" } else { "tab-button" },
                     onclick: move |_| selected_tab.set(Tab::About),
-                    "About"
+                    {t!("about")}
+                    //"About"
                 }
             }
             div {
@@ -148,10 +188,14 @@ fn App() -> Element {
                 // First tab
                 div {
                     class: if selected_tab() == Tab::Games { "tab-panel active" } else { "tab-panel" },
-                    h2 { "All Games" }
+                    h2 { 
+                        {t!("all_games")}
+                        //"All Games" 
+                    }
                     p {
                         margin_bottom: "1.5em",
-                        "Double click on a game to launch. Right click for more options"
+                        {t!("double_click_on_a_game_to_launch_right_click_for_more_options")}
+                        //"Double click on a game to launch. Right click for more options"
                     }
                     div {
                         class: "row",
@@ -202,7 +246,23 @@ fn App() -> Element {
                                 }
                             },
                             {
-                                if show_context_menu() {
+                                if show_context_menu() {                            
+                                    // Imposta l'etichetta corretta basata sullo stato attuale
+                                    if selected_game_is_favourite() {
+                                        //"Remove from favourites"
+                                        selected_game_popup_menu_label.set(t!("remove_from_favourites").to_string());
+                                    } else {
+                                        //"Add to favourites"
+                                        selected_game_popup_menu_label.set(t!("add_to_favourites").to_string());
+                                    }
+                                    
+                                    if selected_favourite_is_favourite() {
+                                        //"Remove from favourites"
+                                        selected_favourite_popup_menu_label.set(t!("remove_from_favourites").to_string());
+                                    } else {
+                                        //"Add to favourites"
+                                        selected_favourite_popup_menu_label.set(t!("add_to_favourites").to_string());
+                                    }
                                     rsx! {
                                         div {
                                             class: "popup",
@@ -214,11 +274,16 @@ fn App() -> Element {
                                                     let config = Config::new().unwrap();
                                                     let (rom, description, snap) = selected_game();
                                                     let favourite = Game::new(&rom, &description, snap);
-                                                    let new_favourites = crate::games::add_favourite(&config, &mut favourites(), &favourite);
+                                                    let new_favourites;
+                                                    if selected_game_is_favourite() {
+                                                        new_favourites = crate::games::remove_favourite(&config, &mut favourites(), &favourite);
+                                                    } else {
+                                                        new_favourites = crate::games::add_favourite(&config, &mut favourites(), &favourite);
+                                                    }
                                                     favourites.set(new_favourites);
                                                     show_context_menu.set(false);
                                                 },
-                                                "Add to favourites"
+                                                {selected_game_popup_menu_current_label()}
                                             }
                                         }
                                     }
@@ -237,7 +302,8 @@ fn App() -> Element {
                                         }
                                     }    
                                     label {
-                                        "Type the name of a game to search for it"
+                                        {t!("type_the_name_of_a_game_to_search_for_it")}
+                                        //"Type the name of a game to search for it"
                                     }
                                 }
                             }
@@ -255,10 +321,14 @@ fn App() -> Element {
                 // Second tab
                 div {
                     class: if selected_tab() == Tab::Favourites { "tab-panel active" } else { "tab-panel" },
-                    h2 { "Favourite Games" }
+                    h2 { 
+                        {t!("favourite_games")}
+                        //"Favourite Games"
+                    }
                     p {
                         margin_bottom: "1.5em",
-                        "Double click on a game to launch. Right click for more options"
+                        {t!("double_click_on_a_game_to_launch_right_click_for_more_options")}
+                        //"Double click on a game to launch. Right click for more options"
                     }
                     div {
                         class: "row",
@@ -317,13 +387,19 @@ fn App() -> Element {
                                             div {
                                                 style: "cursor: pointer; padding: 10px;",
                                                 onclick: move |_| {
-                                                    let config_second_clone = Config::new().unwrap();
-                                                    let (rom, description, snap) = selected_favourite();
+                                                    let config = Config::new().unwrap();
+                                                    let (rom, description, snap) = selected_game();
                                                     let favourite = Game::new(&rom, &description, snap);
-                                                    favourites.set(crate::games::remove_favourite(&config_second_clone, &mut favourites(), &favourite));
+                                                    let new_favourites;
+                                                    if selected_favourite_is_favourite() {
+                                                        new_favourites = crate::games::remove_favourite(&config, &mut favourites(), &favourite);
+                                                    } else {
+                                                        new_favourites = crate::games::add_favourite(&config, &mut favourites(), &favourite);
+                                                    }
+                                                    favourites.set(new_favourites);
                                                     show_context_menu.set(false);
                                                 },
-                                                "Remove from favourites"
+                                                {selected_favourite_popup_menu_current_label()}
                                             }
                                         }
                                     }
@@ -342,7 +418,8 @@ fn App() -> Element {
                                         }
                                     }    
                                     label {
-                                        "Type the name of a game to search for it"
+                                        {t!("type_the_name_of_a_game_to_search_for_it")}
+                                        //"Type the name of a game to search for it"
                                     }
                                 }
                             }
@@ -359,11 +436,15 @@ fn App() -> Element {
                 // Third tab
                 div {
                     class: if selected_tab() == Tab::Settings { "tab-panel active" } else { "tab-panel" },
-                    h2 { "{APP_NAME} Settings" }
+                    h2 { 
+                        {t!("app_name.settings", app_name = APP_NAME )}
+                        //"{APP_NAME} Settings"
+                    }
                     div {
                         class: "setting",
                         label {
-                            "MAME executable path"
+                            {t!("mame_executable_path")}
+                            //"MAME executable path"
                         }
                         input {
                             size: 50,
@@ -377,7 +458,10 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(file) = FileDialog::new()
-                                            .add_filter("All files", &["*"]) // Filter for all files
+                                            .add_filter(
+                                                t!("all_files"),
+                                                //"All files", 
+                                                &["*"]) // Filter for all files
                                             .pick_file() {
                                             mame_executable.set(file);
                                         }
@@ -387,13 +471,15 @@ fn App() -> Element {
                                     }
                                 }
                             },
-                            "Browse"
+                            {t!("browse")}
+                            //"Browse"
                         }
                     }
                     div {
                         class: "setting",
                         label {
-                            "ROMS directory"
+                            {t!("roms_directory")}
+                            //"ROMS directory"
                         }
                         input {
                             size: 50,
@@ -407,7 +493,10 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(directory) = FileDialog::new()
-                                            .add_filter("All files", &["*"]) // Filter for all files
+                                            .add_filter(
+                                                t!("all_files"),
+                                                //"All files", 
+                                                &["*"]) // Filter for all files
                                             .pick_folder() {
                                             roms_path.set(directory);
                                         }
@@ -417,13 +506,15 @@ fn App() -> Element {
                                     }
                                 }
                             },
-                            "Browse"
+                            {t!("browse")}
+                            //"Browse"
                         }
                     }
                     div {
                         class: "setting",
                         label {
-                            "SNAPS zip (not 7z) file path"
+                            {t!("snaps_zip_not_7z_file_path")}
+                            //"SNAPS zip (not 7z) file path"
                         }
                         input {
                             size: 50,
@@ -437,7 +528,10 @@ fn App() -> Element {
                                 match check_dialog_utility() {
                                     Ok(_) => {
                                         if let Some(file) = FileDialog::new()
-                                            .add_filter("Zip file", &["*.zip"]) // Filter for all zip files
+                                            .add_filter(
+                                                t!("zip_file"),
+                                                //"Zip file",
+                                                &["*.zip"]) // Filter for all zip files
                                             .pick_file() {
                                             snap_file.set(file);
                                         }
@@ -461,10 +555,16 @@ fn App() -> Element {
                                         config.snap_file = snap_file();
                                         match config.save() {
                                             Ok(_) => {
-                                                status.set("The settings have been saved correctly.".into());
+                                                status.set(
+                                                    t!("the_settings_have_been_saved_correctly").into()
+                                                    //"The settings have been saved correctly."
+                                                );
                                             },
                                             Err(e) => {
-                                                status.set(format!("Error while saving settings: {}", e));
+                                                status.set(
+                                                    t!("error_while_saving_settings.error", error = e.to_string()).to_string()
+                                                    //format!("Error while saving settings: {}", e)
+                                                );
                                             }
                                         }
                                     },
@@ -475,19 +575,31 @@ fn App() -> Element {
                                     class: "action-button",
                                     onclick: move |_| async move {
                                         let config_third_clone = Config::new().unwrap();
-                                        status.set("Reading the roms list from mame...".into());
+                                        status.set(
+                                            t!("reading_the_roms_list_from_mame").into()
+                                            //"Reading the roms list from mame..."
+                                        );
                                         // Wait to update the status
                                         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-                                        let xml_string = crate::games::get_xml_roms(&config_third_clone).expect("Cannot get xml data from mame");
+                                        let xml_string = crate::games::get_xml_roms(&config_third_clone).expect(
+                                            t!("cannot_get_xml_data_from_mame").to_string().as_str()
+                                            //"Cannot get xml data from mame"
+                                        );
 
                                         status.set("Parsing the roms list to get valid roms...".into());
                                         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
-                                        let (roms, descriptions) = crate::games::get_all_roms(&config_third_clone, &xml_string).expect("Cannot read all roms and their descriptions");
+                                        let (roms, descriptions) = crate::games::get_all_roms(&config_third_clone, &xml_string).expect(
+                                            t!("cannot_read_all_roms_and_their_descriptions").to_string().as_str()
+                                            //"Cannot read all roms and their descriptions"
+                                        );
                                         let mut all_games: Vec<Game> = Vec::new();
 
-                                        status.set("Verifying working roms...".into());
+                                        status.set(
+                                            t!("verifying_working_roms").into()
+                                            //"Verifying working roms..."
+                                        );
                                         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                                         let total_roms = roms.len();
@@ -498,14 +610,20 @@ fn App() -> Element {
                                         for batch_index in 0..num_batches {
                                             let start_index = batch_index * BATCH_SIZE;
                                             let end_index = usize::min((batch_index + 1) * BATCH_SIZE, total_roms);
-                                            status.set(format!("Verifying ROMS {}...{} of {}...", (start_index + 1), end_index, total_roms));
+                                            status.set(
+                                                t!("verifying_roms.from.to.of.total", from = (start_index + 1), to = end_index, total = total_roms).into()
+                                                //format!("Verifying ROMS {}...{} of {}...", (start_index + 1), end_index, total_roms)
+                                            );
                                             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                                             let current_batch = &roms[start_index..end_index];
                                             let roms_batch_results = crate::games::verify_batch_roms(&config_third_clone, current_batch);
                                             working_roms.extend(roms_batch_results);
 
-                                            status.set(format!("Verifying SNAPS {}...{} of {}...", (start_index + 1), end_index, total_roms));
+                                            status.set(
+                                                t!("verifying_snaps.from.to.of.total", from = (start_index + 1), to = end_index, total = total_roms).into()
+                                                //format!("Verifying SNAPS {}...{} of {}...", (start_index + 1), end_index, total_roms)
+                                            );
                                             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                                             let snaps_batch_results = crate::games::verify_batch_snaps(&config_third_clone, current_batch);
                                             working_snaps.extend(snaps_batch_results);
@@ -520,20 +638,30 @@ fn App() -> Element {
                                             }
                                         }
 
-                                        status.set("Saving all games...".into());
+                                        status.set(
+                                            t!("saving_all_games").into()
+                                            //"Saving all games..."
+                                        );
                                         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
 
                                         match crate::games::save(&config_third_clone, &all_games) {
                                             Ok(_) => {},
                                             Err(e) => {
-                                                panic!("Error while saving games list: {}", e);
+                                                panic!("{}",
+                                                    t!("error_while_saving_games_list.error", error = e.to_string()).to_string()
+                                                    //"Error while saving games list: {}", e
+                                                );
                                             }
                                         };
 
-                                        status.set("Complete!".into());
+                                        status.set(
+                                            t!("complete").into()
+                                            //"Complete!".into()
+                                        );
                                         games.set(all_games);
                                     },
-                                    "Refresh games list"
+                                    {t!("refresh_games_list")}
+                                    //"Refresh games list"
                                 }
                         }
                         div {
@@ -544,7 +672,10 @@ fn App() -> Element {
                 // Fourth tab
                 div {
                     class: if selected_tab() == Tab::About { "tab-panel active" } else { "tab-panel" },
-                    h2 { "About {APP_NAME}" }
+                    h2 { 
+                        {t!("about.app_name", app_name = APP_NAME)}
+                        //"About {APP_NAME}"
+                    }
                     div {
                         class: "row",
                         div {
@@ -556,7 +687,8 @@ fn App() -> Element {
                         }
                         div {
                             p {
-                                "{APP_NAME} {app_version}, by "
+                                {t!("app_name.version.by", app_name = APP_NAME, version = app_version)}
+                                //"{APP_NAME} {app_version}, by "
                                 a {
                                     href: "mailto:doriansoru@gmail.com",
                                     "Dorian Soru"
@@ -564,7 +696,8 @@ fn App() -> Element {
                                 ", 2025."
                             }
                             p {
-                                "Released under the "
+                                {t!("released_under_the")}
+                                //"Released under the "
                                 a {
                                     href: "https://www.gnu.org/licenses/gpl-3.0.html",
                                     "GNU General Public License 3.0"

@@ -24,4 +24,6 @@ script = []
 script = []
 
 [bundle]
-resources = [ "/assets/tabs.css" ]
+resources = [ 
+    "/assets/tabs.css" 
+]

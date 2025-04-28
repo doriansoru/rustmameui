@@ -18,8 +18,8 @@ impl Game {
         }
     }
 
-    pub fn description(&self) -> &String {
-        &self.description
+    pub fn description(&self) -> String {
+        self.description.clone()
     }
 
     pub fn get_snap(&self, snap_file: &String) -> Result<String, Box<dyn std::error::Error>> {
@@ -31,20 +31,20 @@ impl Game {
         let reader = std::io::BufReader::new(file);
         let mut archive = zip::ZipArchive::new(reader)?;
 
-        // Ottieni il nome del file PNG da cercare nell'archivio
+        // Get the PNG filename to look for in the zip file 
         let png_name = format!("{}.png", self.rom());
 
-        // Cerca e leggi il file dall'archivio
+        // Search and read from the zipfile
         let mut zip_file = archive.by_name(&png_name)?;
 
-        // Leggi i contenuti binari del file
+        // Read the content of the png
         let mut png_data = Vec::new();
         std::io::Read::read_to_end(&mut zip_file, &mut png_data)?;
 
-        // Converti i dati binari in base64
+        // Convert the content to base64
         let base64_data = base64::engine::general_purpose::STANDARD.encode(&png_data);
 
-        // Crea il data URL per l'attributo src dell'immagine
+        // Create the data URL for the html src attribute
         let data_url = format!("data:image/png;base64,{}", base64_data);
 
         Ok(data_url)
@@ -63,7 +63,7 @@ impl Game {
         self.snap
     }
 
-    pub fn rom(&self) -> &String {
-        &self.rom
+    pub fn rom(&self) -> String {
+        self.rom.clone()
     }
 }

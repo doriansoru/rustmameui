@@ -1,0 +1,134 @@
+_version: 2
+about:
+  en: About
+  it: Informazioni su
+about.app_name:
+  en: "About %{app_name}"
+  it: "Informazioni su %{app_name}"
+add_to_favourites:
+  en: Add to favourites
+  it: Aggiungi ai preferiti
+all_files:
+  en: All files
+  it: Tutti i file
+all_games:
+  en: All games
+  it: Tutti i giochi
+app_name.settings:
+  en: Settings
+  it: Impostazioni
+app_name.version.by:
+  en: "by "
+  it: "a cura di "
+browse:
+  en: Browse
+  it: Sfoglia
+cannot_create_the_app_configuration_directory:
+  en: Cannot create the app configuration directory
+  it: Impossibile creare la directory di configuratione della app
+cannot_get_the_system_configuration_directory:
+  en: Cannot get the system configuration directory
+  it: Impossibile ottenere la directory di configuratione del sistema
+cannot_get_xml_data_from_mame:
+  en: Cannot get xml data from mame
+  it: Impossible ottenere dati xml da mame
+cannot_open_the_snaps_file:
+  en: Cannot open the snaps file
+  it: Impossibile aprire il file degli snap
+cannot_read_all_roms_and_their_descriptions:
+  en: Cannot read all roms and their descriptions
+  it: Impossibile leggere tutti i rom e le loro descrizioni
+cannot_read_the_mame_executable_path_from_the_configuration_file:
+  en: Cannot read the mame executable path from the configuration file
+  it: Impossibile leggere il percorso dell'eseguibile mame dal file di configurazione
+cannot_read_the_roms_path_from_the_configuration_file:
+  en: Cannot read the roms path from the configuration file
+  it: Impossibile leggere il percorso dei rom dal file di configurazione
+cannot_read_the_snaps_file_path_from_the_configuration_file:
+  en: Cannot read the snaps file path from the configuration file
+  it: Impossibile leggere il percorso del file degli snap dal file di configurazione
+complete:
+  en: Complete!
+  it: Finito!
+double_click_on_a_game_to_launch_right_click_for_more_options:
+  en: Double click on a game to launch. Right click for more options
+  it: Doppio click su un gioco per lanciarlo. Click destro per altre opzioni
+error.error:
+  en: "Error: %{error}"
+  it: "Errore: %{error}"
+error_no_dialog_utility:
+  en: "Error: No dialog utility has been found. Install 'zenity' or 'kdialog' to open the file chooser dialog"
+  it: "Errore: Non è stata trovata alcuna app per le finestre di dialogo. Installa 'zenity' o 'kdialog' per aprile la finestra del selettore di file"
+error_while_creating_the_favourites_file.error:
+  en: "Error while creating the favourites file: %{error}"
+  it: "Errore nella creazione del file dei preferiti: %{error}"
+error_while_executing.mame_executable.error:
+  en: "Error while executing '%{mame_executable} -verifyroms': %{error}"
+  it: "Errore durante l'esecuzione di '%{mame_executable} -verifyroms': %{error}"
+error_while_saving_games_list.error:
+  en: "Error while saving games list: %{error}"
+  it: "Errore durante il salvataggio della lista dei giochi: %{error}"
+error_while_saving_settings.error:
+  en: "Error while saving settings: %{error}"
+  it: "Errore durante il salvataggio delle impostazioni: %{error}"
+error_while_serializing_the_favourites.error:
+  en: "Error while serializing the favourites: %{error}"
+  it: "Errore nella codifica dei prefriti: %{error}"  
+error_while_writing_to_the_favourites_file.error:
+  en: "Error while writing to the favourites file: %{error}"
+  it: "Errore durante la scrittura del file dei preferiti: %{error}"
+favourite_games:
+  en: Favourite games
+  it: Giochi preferiti
+favourites:
+  en: Favourites
+  it: Preferiti
+games:
+  en: Games
+  it: Giochi
+mame_executable_path:
+  en: Mame executable path
+  it: Percorso dell'eseguibile Mame
+reading_the_roms_list_from_mame:
+  en: Reading the roms list from mame...
+  it: Lettura dell'elenco dei rom da mame...
+refresh_games_list:
+  en: Refresh games list
+  it: Aggiorna la lista dei giochi
+released_under_the:
+  en: "Released under the "
+  it: "Rilasciato sotto la "
+remove_from_favourites:
+  en: Remove from favourites
+  it: Rimuovi dai preferiti
+roms_directory:
+  en: ROMS directory
+  it: Directory dei ROM
+saving_all_games:
+  en: Saving all games...
+  it: Salvataggio di tutti i giochi...
+settings:
+  en: Settings
+  it: Impostazioni
+snaps_zip_not_7z_file_path:
+  en: SNAPS zip (not 7z) file path
+  it: Percorso del file zip (non 7z) degli SNAP
+the_settings_have_been_saved_correctly:
+  en: The settings have been saved correctly
+  it: Le impostazioni sono state salvate correttamente
+type_the_name_of_a_game_to_search_for_it:
+  en: Type the name of a game to search for it
+  it: Digita il nome di un gioco per cercarlo
+verifying_roms.from.to.of.total:
+  en: "Verifying ROMS %{from}...%{to} of %{total}..."
+  it: "Verifica dei ROM %{from}...%{to} di %{total}..."
+verifying_snaps.from.to.of.total:
+  en: "Verifying SNAPS %{from}...%{to} of %{total}..."
+  it: "Verifica degli SNAP %{from}...%{to} di %{total}..."
+verifying_working_roms:
+  en: Verifying working roms...
+  it: Verifica dei rom funzionanti...
+zip_file:
+  en: Zip file
+  it: File zip
+
