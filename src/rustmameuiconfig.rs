@@ -1,6 +1,18 @@
+//! This module handles the application's configuration, including loading from a file and environment
+//! variables, saving the configuration, and managing the application's configuration directory.
+
 use std::path::PathBuf;
 use rust_i18n::t;
 
+/// A macro to create a boxed `std::io::Error` with a custom message.
+///
+/// This provides a convenient way to return a generic `Box<dyn std::error::Error>`
+/// containing an `io::Error` with `ErrorKind::Other`.
+///
+/// It supports two forms:
+/// - `box_err!($msg:expr)`: Takes a single string message.
+/// - `box_err!($fmt:expr, $($arg:tt)*)`: Takes a format string and arguments,
+///   similar to `format!`.
 macro_rules! box_err {
     ($msg:expr) => {
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, $msg)))
@@ -11,15 +23,44 @@ macro_rules! box_err {
     };
 }
 
+/// Represents the application's configuration settings.
+///
+/// This struct holds paths to important directories and files used by the application,
+/// such as the project configuration directory, MAME executable path, ROMs path,
+/// and snapshot file path. It is designed to be clonable.
 #[derive(Clone)]
 pub struct Config {
+    /// The base directory for the application's configuration files.
     pub project_config_dir: PathBuf,
+    /// The path to the MAME executable.
     pub mame_executable: PathBuf,
+    /// The path to the directory containing MAME ROM files.
     pub roms_path: PathBuf,
+    /// The path to the snapshot file used by the application.
     pub snap_file: PathBuf,
 }
 
 impl Config {
+    /// Creates a new `Config` instance by loading settings from the configuration file
+    /// and environment variables.
+    ///
+    /// It first determines the application's configuration directory based on the package name,
+    /// creates it if it doesn't exist, and finds the path to the configuration file (e.g., `app_name.toml`).
+    ///
+    /// If the configuration file does not exist, it attempts to find the MAME executable
+    /// and saves a default configuration file with initial values (potentially empty PathBufs).
+    ///
+    /// It then loads configuration settings from the created/existing file and overrides
+    /// them with environment variables prefixed by the package name.
+    ///
+    /// Finally, it extracts and validates the required paths (`mame_executable`, `roms_path`, `snap_file`)
+    /// from the loaded settings.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the populated `Config` struct on success,
+    /// or a `Box<dyn std::error::Error>` if any step fails (e.g., cannot find config directory,
+    /// cannot create directory, cannot read file, missing required configuration keys).
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Get the package name
         let package_name = env!("CARGO_PKG_NAME");
@@ -105,6 +146,18 @@ impl Config {
         })
     }
 
+    /// Saves the current configuration settings to the application's configuration file.
+    ///
+    /// The configuration is written to the TOML file located within the `project_config_dir`.
+    /// The file name is derived from the package name with a `.toml` extension.
+    ///
+    /// The method serializes the `mame_executable`, `roms_path`, and `snap_file` fields
+    /// into a simple TOML format.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or a `Box<dyn std::error::Error>` if an error occurs
+    /// during file creation or writing.
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
         use std::fs::File;

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_favourite","get_all_roms","get_xml_roms","load","load_favourites","process_driver","remove_favourite","save","sort","verify_batch_roms","verify_batch_snaps"]};

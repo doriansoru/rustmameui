@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ABOUT","APP_NAME","BATCH_SIZE","TABS_CSS"],"enum":["Tab"],"fn":["App","check_dialog_utility","draw"]};

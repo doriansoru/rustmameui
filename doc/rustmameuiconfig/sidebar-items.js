@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["box_err"],"struct":["Config"]};
