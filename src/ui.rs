@@ -181,31 +181,6 @@ fn App() -> Element {
         found
     });
 
-    // State signal for the label displayed in the context menu for the *selected game* in the Favourites tab.
-    let mut selected_favourite_popup_menu_label = use_signal(|| "".to_string());
-    // Memoized state for the current label value of the context menu for the Favourites tab.
-    // Updates when `selected_favourite_popup_menu_label` changes.
-    let selected_favourite_popup_menu_current_label = use_memo(move || {
-        selected_favourite_popup_menu_label()
-    });
-
-    // Memoized state to check if the currently selected game in the Favourites tab is already a favourite.
-    // This is redundant for the Favourites tab as all games *should* be favourites,
-    // but the logic mirrors the Games tab for potential future use or consistency.
-    let selected_favourite_is_favourite = use_memo(move || {
-        let (rom, _, _) = selected_favourite(); // Get ROM of the selected favourite
-        let mut found = false;
-        // Iterate through favourites to see if the ROM exists
-        for favourite in favourites() {
-            if favourite.rom() == rom {
-                found = true;
-            }
-        }
-
-        found
-    });
-
-
     // State signal to control the visibility of the context menu.
     let mut show_context_menu = use_signal(|| false);
     // State signals for the context menu's position (x, y coordinates).
@@ -385,20 +360,6 @@ fn App() -> Element {
                                     } else {
                                         //"Add to favourites"
                                         selected_game_popup_menu_label.set(t!("add_to_favourites").to_string());
-                                    }
-
-                                    // This block seems to redundantly set the favourite popup label
-                                    // based on `selected_favourite_is_favourite()`. Given this is within
-                                    // the *Games* tab context menu logic, this might be a copy-paste error
-                                    // or intended for a different context menu instance. It doesn't
-                                    // affect the label displayed for the Games tab context menu, which
-                                    // uses `selected_game_popup_menu_current_label()`.
-                                    if selected_favourite_is_favourite() {
-                                        //"Remove from favourites"
-                                        selected_favourite_popup_menu_label.set(t!("remove_from_favourites").to_string());
-                                    } else {
-                                        //"Add to favourites"
-                                        selected_favourite_popup_menu_label.set(t!("add_to_favourites").to_string());
                                     }
 
                                     // RSX for the context menu div
@@ -628,21 +589,16 @@ fn App() -> Element {
                                                     let (rom, description, snap) = selected_favourite();
                                                     let favourite = Game::new(&rom, &description, snap); // Create Game instance
 
-                                                    // Check if the selected item is currently a favourite.
-                                                    let new_favourites = if selected_favourite_is_favourite() {
-                                                        // If yes, remove it from favourites
-                                                        crate::games::remove_favourite(&config, &mut favourites(), &favourite)
-                                                    } else {
-                                                        // If no, add it to favourites
-                                                        crate::games::add_favourite(&config, &mut favourites(), &favourite)
-                                                    };
+                                                    // Remove the selected favourite from favourites.
+                                                    let new_favourites =  crate::games::remove_favourite(&config, &mut favourites(), &favourite);
+                                                    
                                                     // Update the favourites signal with the new list
                                                     favourites.set(new_favourites);
                                                     // Hide the context menu after action
                                                     show_context_menu.set(false);
                                                 },
                                                 // Display the calculated context menu label for favourites
-                                                {selected_favourite_popup_menu_current_label()}
+                                                {t!("remove_from_favourites")}
                                             }
                                         }
                                     }
