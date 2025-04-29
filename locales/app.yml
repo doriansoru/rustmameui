@@ -92,6 +92,9 @@ launch_game:
 mame_executable_path:
   en: Mame executable path
   it: Percorso dell'eseguibile Mame
+parsing_all_roms_and_their_descriptions:
+  en: Parsing all roms and their descriptions...
+  it: Lettura di tutti i rom e delle loro descrizioni...
 reading_the_roms_list_from_mame:
   en: Reading the roms list from mame...
   it: Lettura dell'elenco dei rom da mame...
@@ -107,12 +110,18 @@ remove_from_favourites:
 roms_directory:
   en: ROMS directory
   it: Directory dei ROM
+rom_verification_task_error:
+  en: "ROM verification task error: %{error}"
+  it: "Errore nel task di verifica dei ROM: %{error}"
 saving_all_games:
   en: Saving all games...
   it: Salvataggio di tutti i giochi...
 settings:
   en: Settings
   it: Impostazioni
+snap_verification_task_error:
+  en: "SNAP verification task error: %{error}"
+  it: "Errore nel task di verifica degli SNAP: %{error}"  
 snaps_zip_not_7z_file_path:
   en: SNAPS zip (not 7z) file path
   it: Percorso del file zip (non 7z) degli SNAP

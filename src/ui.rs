@@ -69,20 +69,17 @@ fn check_dialog_utility() -> Result<(), String> {
 #[component]
 fn GamesTab(
     games: Signal<Vec<Game>>,
-    selected_game: Signal<(String, String, bool)>,
-    game_filter: Signal<String>,
-    snap_data: Signal<String>,
     mame_executable: Signal<std::path::PathBuf>,
     roms_path: Signal<std::path::PathBuf>,
     snap_file: Signal<std::path::PathBuf>,
     favourites: Signal<Vec<Game>>,
     show_context_menu: Signal<bool>,
-    menu_x: Signal<i32>,
-    menu_y: Signal<i32>,
-    selected_game_popup_menu_label: Signal<String>,
-    selected_game_popup_menu_current_label: ReadOnlySignal<String>,
-    selected_game_is_favourite: ReadOnlySignal<bool>,
 ) -> Element {
+    let mut menu_x = use_signal(|| 0_i32);
+    let mut menu_y = use_signal(|| 0_i32);
+
+    let mut game_filter = use_signal(String::new);
+
     let filtered_games = use_memo(move || {
         let filter = game_filter();
         let all_games = games();
@@ -101,6 +98,24 @@ fn GamesTab(
         menu_y.set(y);
         show_context_menu.set(true);
     };
+
+    let mut selected_game_popup_menu_label = use_signal(|| "".to_string());
+    let selected_game_popup_menu_current_label = use_memo(move || selected_game_popup_menu_label());
+
+    let mut selected_game = use_signal(|| (String::new(), String::new(), false));
+
+    let selected_game_is_favourite = use_memo(move || {
+        let (rom, _, _) = selected_game();
+        let mut found = false;
+        for favourite in favourites() {
+            if favourite.rom() == rom {
+                found = true;
+            }
+        }
+        found
+    });    
+    
+    let mut snap_data = use_signal(|| "".to_string());
 
     rsx! {
         div {
@@ -171,11 +186,9 @@ fn GamesTab(
                                     div {
                                         style: "cursor: pointer; padding: 10px;",
                                         onclick: move |_| {
-                                            // Use Config::new() to be sure to use the last configuration saved on disk
-                                            let config = Config::new().unwrap();
                                             let (rom, description, snap) = selected_game();
                                             let game = Game::new(&rom, &description, snap);
-                                            let _ = game.launch(&config.mame_executable, &config.roms_path);
+                                            let _ = game.launch(&mame_executable(), &roms_path());
                                             show_context_menu.set(false);
                                         },
                                         {t!("launch_game")}
@@ -236,16 +249,15 @@ fn GamesTab(
 #[component]
 fn FavouritesTab(
     favourites: Signal<Vec<Game>>,
-    selected_favourite: Signal<(String, String, bool)>,
-    favourite_filter: Signal<String>,
-    favourite_snap_data: Signal<String>,
     mame_executable: Signal<std::path::PathBuf>,
     roms_path: Signal<std::path::PathBuf>,
     snap_file: Signal<std::path::PathBuf>,
     show_context_menu: Signal<bool>,
-    menu_x: Signal<i32>,
-    menu_y: Signal<i32>,
 ) -> Element {
+    let mut menu_x = use_signal(|| 0_i32);
+    let mut menu_y = use_signal(|| 0_i32);
+
+    let mut favourite_filter = use_signal(String::new);
     let filtered_favourites = use_memo(move || {
         let filter = favourite_filter();
         let all_favourites = favourites();
@@ -264,6 +276,10 @@ fn FavouritesTab(
         menu_y.set(y);
         show_context_menu.set(true);
     };
+
+    let mut selected_favourite = use_signal(|| (String::new(), String::new(), false));
+
+    let mut favourite_snap_data = use_signal(|| "".to_string());
 
     rsx! {
         div {
@@ -329,10 +345,9 @@ fn FavouritesTab(
                                     div {
                                         style: "cursor: pointer; padding: 10px;",
                                         onclick: move |_| {
-                                            let config = Config::new().unwrap();
                                             let (rom, description, snap) = selected_favourite();
                                             let favourite = Game::new(&rom, &description, snap);
-                                            let _ = favourite.launch(&config.mame_executable, &config.roms_path);
+                                            let _ = favourite.launch(&mame_executable(), &roms_path());
                                             show_context_menu.set(false);
                                         },
                                         {t!("launch_game")}
@@ -512,17 +527,56 @@ fn SettingsTab(
                         class: "action-button",
                         onclick: move |_| async move {
                             let config_third_clone = Config::new().unwrap();
+                            let config_fourth_clone = config_third_clone.clone();
+                            let config_fifth_clone = config_third_clone.clone();
+                            let config_sixth_clone = config_third_clone.clone();
+
                             status.set(t!("reading_the_roms_list_from_mame").into());
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                            let xml_string = crate::games::get_xml_roms(&config_third_clone)
-                                .unwrap_or_else(|_| { panic!("{}",  t!("cannot_get_xml_data_from_mame").to_string() )});
-                            status.set("Parsing the roms list to get valid roms...".into());
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                            let (roms, descriptions) = crate::games::get_all_roms(&config_third_clone, &xml_string)
-                                .unwrap_or_else(|_| { panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string()) });
+                            let xml_handle: tokio::task::JoinHandle<String> = tokio::task::spawn_blocking(
+                                move || {
+                                    // Executed in a blocking thread
+                                    crate::games::get_xml_roms(&config_third_clone)
+                                    .unwrap_or_else(|_| { panic!("{}",  t!("cannot_get_xml_data_from_mame").to_string() )})
+                                }
+                            );
+                            let xml_string_result = xml_handle.await;
+                            let xml_string: String = match xml_string_result {
+                                Ok(s) => s, // Ok, the task has finished
+                                Err(_) => {
+                                    panic!("{}", t!("cannot_get_xml_data_from_mame").to_string());
+                                }
+                            };
+
+                            status.set(t!("parsing_all_roms_and_their_descriptions").into());
+                            // Create a new blocking task for parsing the XML string.
+                            // The closure takes ownership of 'config_clone_for_parsing' and 'xml_string' (by value).
+                            let parse_handle: tokio::task::JoinHandle<(Vec<String>, Vec<String>)> = tokio::task::spawn_blocking(
+                                move || {
+                                    // This closure executes in a dedicated blocking thread pool.
+                                    // It performs the potentially heavy XML parsing.
+                                    crate::games::get_all_roms(&config_fourth_clone, &xml_string) // Use the cloned config and the moved xml_string
+                                        .unwrap_or_else(|_| {
+                                            panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string());
+                                        })
+                                }
+                            );
+
+                            // Await the result from the parsing task.
+                            let parse_result: Result<(Vec<String>, Vec<String>), tokio::task::JoinError> = parse_handle.await;
+
+                            // Extract the result and handle potential errors that occurred within the blocking task itself
+                            let (roms, descriptions) = match parse_result {
+                                Ok(tuple) => {
+                                    // The blocking task completed successfully and returned the tuple
+                                    tuple
+                                }
+                                Err(_) => {
+                                    panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string());
+                                }
+                            };
+
                             let mut all_games: Vec<Game> = Vec::new();
                             status.set(t!("verifying_working_roms").into());
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                             let total_roms = roms.len();
                             let mut working_roms = Vec::with_capacity(total_roms);
                             let mut working_snaps = Vec::with_capacity(total_roms);
@@ -531,13 +585,47 @@ fn SettingsTab(
                                 let start_index = batch_index * BATCH_SIZE;
                                 let end_index = usize::min((batch_index + 1) * BATCH_SIZE, total_roms);
                                 status.set(t!("verifying_roms.from.to.of.total", from = (start_index + 1), to = end_index, total = total_roms).into());
-                                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                                 let current_batch = &roms[start_index..end_index];
-                                let roms_batch_results = crate::games::verify_batch_roms(&config_third_clone, current_batch);
+                                let current_batch_owned: Vec<String> = current_batch.to_vec();
+                                let config_clone_for_rom_verify = config_fifth_clone.clone();
+                                let parse_handle: tokio::task::JoinHandle<Vec<bool>> = tokio::task::spawn_blocking(
+                                    move || {
+                                        crate::games::verify_batch_roms(&config_clone_for_rom_verify, &current_batch_owned) // Use the cloned config
+                                    }
+                                );
+                                let parse_result: Result<Vec<bool>, tokio::task::JoinError> = parse_handle.await;
+
+                                // Extract the result and handle potential errors that occurred within the blocking task itself
+                                let roms_batch_results = match parse_result {
+                                    Ok(batch) => {
+                                        batch
+                                    }
+                                    Err(e) => {
+                                        panic!("{}", t!("rom_verification_task_error", error = e));
+                                    }
+                                };                                
+                                //let roms_batch_results = crate::games::verify_batch_roms(&config_fifth_clone, current_batch);
                                 working_roms.extend(roms_batch_results);
+                                
                                 status.set(t!("verifying_snaps.from.to.of.total", from = (start_index + 1), to = end_index, total = total_roms).into());
-                                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                                let snaps_batch_results = crate::games::verify_batch_snaps(&config_third_clone, current_batch);
+                                let current_batch_owned: Vec<String> = current_batch.to_vec();
+                                let config_clone_for_rom_verify = config_fifth_clone.clone();
+                                let parse_handle: tokio::task::JoinHandle<Vec<bool>> = tokio::task::spawn_blocking(
+                                    move || {
+                                        crate::games::verify_batch_snaps(&config_clone_for_rom_verify, &current_batch_owned) // Use the cloned config
+                                    }
+                                );
+                                let parse_result: Result<Vec<bool>, tokio::task::JoinError> = parse_handle.await;
+
+                                // Extract the result and handle potential errors that occurred within the blocking task itself
+                                let snaps_batch_results = match parse_result {
+                                    Ok(batch) => {
+                                        batch
+                                    }
+                                    Err(e) => {
+                                        panic!("{}", t!("snap_verification_task_error", error = e));
+                                    }
+                                };                                
                                 working_snaps.extend(snaps_batch_results);
                             }
                             if !roms.is_empty() {
@@ -549,8 +637,7 @@ fn SettingsTab(
                                 }
                             }
                             status.set(t!("saving_all_games").into());
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                            match crate::games::save(&config_third_clone, &all_games) {
+                            match crate::games::save(&config_sixth_clone, &all_games) {
                                 Ok(_) => {},
                                 Err(e) => {
                                     panic!("{}", t!("error_while_saving_games_list.error", error = e.to_string()).to_string());
@@ -612,7 +699,6 @@ fn AboutTab() -> Element {
 /// The main application component.
 #[component]
 fn App() -> Element {
-    let app_version = env!("CARGO_PKG_VERSION");
     let mut selected_tab = use_signal(|| Tab::Games);
 
     let config = match Config::new() {
@@ -621,61 +707,16 @@ fn App() -> Element {
     };
 
     let config_clone = config.clone();
-    let mut mame_executable = use_signal(|| config_clone.mame_executable);
-    let mut snap_file = use_signal(|| config_clone.snap_file);
-    let mut roms_path = use_signal(|| config_clone.roms_path);
+    let mame_executable = use_signal(|| config_clone.mame_executable);
+    let snap_file = use_signal(|| config_clone.snap_file);
+    let roms_path = use_signal(|| config_clone.roms_path);
 
-    let mut snap_data = use_signal(|| "".to_string());
-    let mut favourite_snap_data = use_signal(|| "".to_string());
+    let games = use_signal(|| crate::games::load(&config).unwrap());
+    let favourites = use_signal(|| crate::games::load_favourites(&config).unwrap());
 
-    let mut games = use_signal(|| crate::games::load(&config).unwrap());
-    let mut favourites = use_signal(|| crate::games::load_favourites(&config).unwrap());
-
-    let mut selected_game = use_signal(|| (String::new(), String::new(), false));
-    let mut selected_favourite = use_signal(|| (String::new(), String::new(), false));
-
-    let mut game_filter = use_signal(String::new);
-    let mut favourite_filter = use_signal(String::new);
-
-    let filtered_games = use_memo(move || {
-        let filter = game_filter();
-        let all_games = games();
-        all_games
-            .iter()
-            .filter(|item| item.description().to_lowercase().contains(&filter.to_lowercase()))
-            .cloned()
-            .collect::<Vec<Game>>()
-    });
-
-    let filtered_favourites = use_memo(move || {
-        let filter = favourite_filter();
-        let all_favourites = favourites();
-        all_favourites
-            .iter()
-            .filter(|item| item.description().to_lowercase().contains(&filter.to_lowercase()))
-            .cloned()
-            .collect::<Vec<Game>>()
-    });
-
-    let mut status = use_signal(|| String::from(""));
-
-    let mut selected_game_popup_menu_label = use_signal(|| "".to_string());
-    let selected_game_popup_menu_current_label = use_memo(move || selected_game_popup_menu_label());
-
-    let selected_game_is_favourite = use_memo(move || {
-        let (rom, _, _) = selected_game();
-        let mut found = false;
-        for favourite in favourites() {
-            if favourite.rom() == rom {
-                found = true;
-            }
-        }
-        found
-    });
+    let status = use_signal(|| String::from(""));
 
     let mut show_context_menu = use_signal(|| false);
-    let mut menu_x = use_signal(|| 0_i32);
-    let mut menu_y = use_signal(|| 0_i32);
 
     let hide_menu = move |_| {
         show_context_menu.set(false);
@@ -716,33 +757,20 @@ fn App() -> Element {
                 if selected_tab() == Tab::Games {
                     GamesTab {
                         games,
-                        selected_game,
-                        game_filter,
-                        snap_data,
                         mame_executable,
                         roms_path,
                         snap_file,
                         favourites,
                         show_context_menu,
-                        menu_x,
-                        menu_y,
-                        selected_game_popup_menu_label,
-                        selected_game_popup_menu_current_label,
-                        selected_game_is_favourite,
                     }
                 }
                 if selected_tab() == Tab::Favourites {
                     FavouritesTab {
                         favourites,
-                        selected_favourite,
-                        favourite_filter,
-                        favourite_snap_data,
                         mame_executable,
                         roms_path,
                         snap_file,
                         show_context_menu,
-                        menu_x,
-                        menu_y,
                     }
                 }
                 if selected_tab() == Tab::Settings {
