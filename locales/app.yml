@@ -53,6 +53,9 @@ complete:
 double_click_on_a_game_to_launch_right_click_for_more_options:
   en: Double click on a game to launch. Right click for more options
   it: Doppio click su un gioco per lanciarlo. Click destro per altre opzioni
+error_fetching_snap.error:
+  en: "Error fetching snap: %{error}"
+  it: "Errore nell'estrazione dello snap: %{error}"
 error.error:
   en: "Error: %{error}"
   it: "Errore: %{error}"

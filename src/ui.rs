@@ -1,15 +1,10 @@
-//! This module contains the Dioxus UI code for the application.
-//! It defines the main application component (`App`), handles state management
-//! using signals and memos, renders the tabbed interface for games, favourites,
-//! settings, and about sections, and manages user interactions like selecting
-//! games, launching games, adding/removing favourites, updating settings,
-//! and refreshing the game list.
-
 use dioxus::prelude::*;
 use crate::rustmameuiconfig::Config;
 use crate::game::Game;
 use rfd::FileDialog; // Used for native file/folder dialogs
 use rust_i18n::t; // Macro for internationalization (i18n)
+use std::path::PathBuf;
+use tokio::task; // Import tokio::task
 
 // Define external assets
 const TABS_CSS: Asset = asset!("/assets/tabs.css");
@@ -37,6 +32,7 @@ pub fn draw() {
             .with_resizable(true)
             .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(1024.0, 860.0))
             .with_title::<&str>(APP_NAME);
+
         dioxus::LaunchBuilder::new()
             .with_cfg(dioxus::desktop::Config::new().with_window(window).with_menu(None))
             .launch(App);
@@ -65,25 +61,39 @@ fn check_dialog_utility() -> Result<(), String> {
     Ok(())
 }
 
-/// Component for the Games tab content.
+/// Component for rendering a list of games or favourites.
 #[component]
-fn GamesTab(
-    games: Signal<Vec<Game>>,
-    mame_executable: Signal<std::path::PathBuf>,
-    roms_path: Signal<std::path::PathBuf>,
-    snap_file: Signal<std::path::PathBuf>,
+fn GameListTab(
+    /// The list of games or favourites to display.
+    items: Signal<Vec<Game>>,
+    /// The full list of games (needed for adding to favourites in Games tab).
+    all_games: Signal<Vec<Game>>,
+    /// The list of favourites (needed for adding/removing).
     favourites: Signal<Vec<Game>>,
+    /// Path to the MAME executable.
+    mame_executable: Signal<PathBuf>,
+    /// Path to the ROMs directory.
+    roms_path: Signal<PathBuf>,
+    /// Path to the snapshots zip file.
+    snap_file: Signal<PathBuf>,
+    /// Signal to control context menu visibility.
     show_context_menu: Signal<bool>,
+    /// Text for the main header (e.g., "all_games", "favourite_games").
+    header_text: String,
+    /// Text for the filter input label.
+    filter_label_text: String,
+    /// Flag indicating if this is the favourites list tab.
+    is_favourite_list: bool,
 ) -> Element {
     let mut menu_x = use_signal(|| 0_i32);
     let mut menu_y = use_signal(|| 0_i32);
 
-    let mut game_filter = use_signal(String::new);
+    let mut item_filter = use_signal(String::new);
 
-    let filtered_games = use_memo(move || {
-        let filter = game_filter();
-        let all_games = games();
-        all_games
+    let filtered_items = use_memo(move || {
+        let filter = item_filter();
+        let current_items = items(); // Use the 'items' prop here
+        current_items
             .iter()
             .filter(|item| item.description().to_lowercase().contains(&filter.to_lowercase()))
             .cloned()
@@ -99,29 +109,41 @@ fn GamesTab(
         show_context_menu.set(true);
     };
 
-    let mut selected_game_popup_menu_label = use_signal(|| "".to_string());
-    let selected_game_popup_menu_current_label = use_memo(move || selected_game_popup_menu_label());
+    let mut selected_item_rom = use_signal(String::new);
+    let mut snap_data = use_signal(|| "".to_string());
 
-    let mut selected_game = use_signal(|| (String::new(), String::new(), false));
+    // Memo to determine the context menu label and action based on selected item and tab type
+    let context_menu_action = use_memo(move || {
+        let rom = selected_item_rom();
+        let is_favourite = favourites().iter().any(|fav| fav.rom() == rom);
 
-    let selected_game_is_favourite = use_memo(move || {
-        let (rom, _, _) = selected_game();
-        let mut found = false;
-        for favourite in favourites() {
-            if favourite.rom() == rom {
-                found = true;
+        if is_favourite_list {
+            // If it's the favourites list, the option is always "Remove from favourites"
+            (t!("remove_from_favourites").to_string(), ContextAction::RemoveFavourite)
+        } else {
+            // If it's the games list, the option is "Add/Remove from favourites" based on its favourite status
+            if is_favourite {
+                (t!("remove_from_favourites").to_string(), ContextAction::RemoveFavourite)
+            } else {
+                (t!("add_to_favourites").to_string(), ContextAction::AddFavourite)
             }
         }
-        found
-    });    
-    
-    let mut snap_data = use_signal(|| "".to_string());
+    });
+
+    // Enum to represent the context menu actions
+    #[derive(PartialEq, Clone, Copy)]
+    enum ContextAction {
+        AddFavourite,
+        RemoveFavourite,
+        None, // Should not happen in this implementation but good for completeness
+    }
+
 
     rsx! {
         div {
             class: "tab-panel active",
             // Header
-            h2 { {t!("all_games")} }
+            h2 { {header_text} }
             p {
                 margin_bottom: "1.5em",
                 {t!("double_click_on_a_game_to_launch_right_click_for_more_options")}
@@ -129,56 +151,70 @@ fn GamesTab(
             // Content Layout
             div {
                 class: "row",
-                // Left Column: Game List and Filter
+                // Left Column: List and Filter
                 div {
                     class: "column",
-                    // Game List
+                    // List
                     select {
                         style: "max-width: 500px;",
                         resize: "both",
                         autocomplete: "on",
                         size: 20,
                         oncontextmenu: handle_context_menu,
-                        onchange: move |event| {
+                        onchange: move |event| async move { // Made onchange async move
                             let rom = event.value().clone();
-                            let description = games.read().iter()
-                                .find(|game| game.rom().clone() == rom)
-                                .map(|game| game.description().clone())
-                                .unwrap_or_default();
-                            let snap = games.read().iter()
-                                .find(|game| game.rom().clone() == rom)
-                                .map(|game| game.snap())
-                                .unwrap_or_default();
-                            snap_data.set(Game::new(&rom, &description, snap).get_snap(&snap_file().display().to_string()).unwrap());
-                            selected_game.set((rom, description, snap));
+                            selected_item_rom.set(rom.clone());
+
+                            let selected_game_option = items().into_iter() // Search within the *current* list (games or favourites)
+                                .find(|item| item.rom().clone() == rom);
+
+                            if let Some(selected_game) = selected_game_option {
+                                // Use tokio::task::spawn_blocking for get_snap as it might read from disk
+                                let snap_path_clone = snap_file().display().to_string(); // Read signal before moving
+                                let selected_game_clone = selected_game.clone();
+                                let snap_handle: tokio::task::JoinHandle<String> = task::spawn_blocking(move || {
+                                    selected_game_clone.get_snap(&snap_path_clone).unwrap_or_default() // Consider better error handling
+                                });
+
+                                // Await the result of the blocking task
+                                match snap_handle.await {
+                                    Ok(snap_base64) => {
+                                        snap_data.set(snap_base64);
+                                    },
+                                    Err(e) => {
+                                        // Handle potential error from the blocking task
+                                        eprintln!("{}", t!("error_fetching_snap.error", error = e.to_string()));
+                                        snap_data.set("".to_string()); // Clear snap on error
+                                    }
+                                }
+                            } else {
+                                snap_data.set("".to_string()); // Clear snap if game not found (shouldn't happen)
+                            }
                         },
                         ondoubleclick: move |_| {
-                            let (rom, description, snap) = selected_game();
-                            let game = Game::new(&rom, &description, snap);
-                            let _ = game.launch(&mame_executable(), &roms_path());
+                            let rom = selected_item_rom();
+                            if let Some(game) = items.read().iter().find(|item| item.rom() == rom) {
+                                let _ = game.launch(&mame_executable(), &roms_path()); // Consider error handling
+                            }
                         },
                         onkeypress: move |ev: Event<KeyboardData>| {
                             if ev.key() == Key::Enter {
-                                let (rom, description, snap) = selected_game();
-                                let game = Game::new(&rom, &description, snap);
-                                let _ = game.launch(&mame_executable(), &roms_path());
+                                let rom = selected_item_rom();
+                                if let Some(game) = items.read().iter().find(|item| item.rom() == rom) {
+                                    let _ = game.launch(&mame_executable(), &roms_path()); // Consider error handling
+                                }
                             }
                         },
-                        for game in filtered_games() {
+                        for item in filtered_items() {
                             option {
-                                value: game.rom().clone(),
-                                {game.description().clone()}
+                                value: item.rom().clone(),
+                                {item.description().clone()}
                             }
                         }
                     }
                     // Context Menu
                     {
                         if show_context_menu() {
-                            if selected_game_is_favourite() {
-                                selected_game_popup_menu_label.set(t!("remove_from_favourites").to_string());
-                            } else {
-                                selected_game_popup_menu_label.set(t!("add_to_favourites").to_string());
-                            }
                             rsx! {
                                 div {
                                     class: "popup",
@@ -186,9 +222,10 @@ fn GamesTab(
                                     div {
                                         style: "cursor: pointer; padding: 10px;",
                                         onclick: move |_| {
-                                            let (rom, description, snap) = selected_game();
-                                            let game = Game::new(&rom, &description, snap);
-                                            let _ = game.launch(&mame_executable(), &roms_path());
+                                            let rom = selected_item_rom();
+                                             if let Some(game) = items.read().iter().find(|item| item.rom() == rom) {
+                                                let _ = game.launch(&mame_executable(), &roms_path()); // Consider error handling
+                                            }
                                             show_context_menu.set(false);
                                         },
                                         {t!("launch_game")}
@@ -196,18 +233,37 @@ fn GamesTab(
                                     div {
                                         style: "cursor: pointer; padding: 10px;",
                                         onclick: move |_| {
-                                            let config = Config::new().unwrap();
-                                            let (rom, description, snap) = selected_game();
-                                            let favourite = Game::new(&rom, &description, snap);
-                                            let new_favourites = if selected_game_is_favourite() {
-                                                crate::games::remove_favourite(&config, &mut favourites(), &favourite)
-                                            } else {
-                                                crate::games::add_favourite(&config, &mut favourites(), &favourite)
-                                            };
-                                            favourites.set(new_favourites);
+                                            let rom = selected_item_rom();
+                                            let action = context_menu_action().1; // Get the ContextAction enum value
+                                            let config = Config::new().unwrap(); // Consider handling this error better
+                                            let mut current_favourites = favourites();
+
+                                            // Find the game in the *full* games list if adding, or create a dummy for removing
+                                            match action {
+                                                ContextAction::AddFavourite => {
+                                                     if let Some(selected_game) = all_games.read().iter().find(|game| game.rom() == rom) {
+                                                        let new_favourites = crate::games::add_favourite(&config, &mut current_favourites, selected_game);
+                                                        favourites.set(new_favourites);
+                                                    }
+                                                },
+                                                ContextAction::RemoveFavourite => {
+                                                     // Need to find the *specific* favourite to remove from the favourites list
+                                                     // Pass a dummy game with just ROM for comparison/removal
+                                                     let dummy_game = Game::new(&rom, &String::from(""), false); // Corrected: Use String::from("")
+                                                     let new_favourites = crate::games::remove_favourite(&config, &mut current_favourites, &dummy_game); // Pass dummy for comparison
+                                                     favourites.set(new_favourites);
+                                                },
+                                                ContextAction::None => {} // Should not happen
+                                            }
+
+
+                                            // After modifying favourites, potentially re-filter the *current* list if it's the favourites tab
+                                            if is_favourite_list {
+                                                 items.set(favourites()); // Update the items list signal for the favourites tab
+                                            }
                                             show_context_menu.set(false);
                                         },
-                                        {selected_game_popup_menu_current_label()}
+                                        {context_menu_action().0} // Use the calculated label
                                     }
                                 }
                             }
@@ -223,11 +279,11 @@ fn GamesTab(
                                 r#type: "text",
                                 size: 50,
                                 oninput: move |evt| {
-                                    game_filter.set(evt.value());
+                                    item_filter.set(evt.value());
                                 }
                             }
                             label {
-                                {t!("type_the_name_of_a_game_to_search_for_it")}
+                                {filter_label_text}
                             }
                         }
                     }
@@ -245,160 +301,6 @@ fn GamesTab(
     }
 }
 
-/// Component for the Favourites tab content.
-#[component]
-fn FavouritesTab(
-    favourites: Signal<Vec<Game>>,
-    mame_executable: Signal<std::path::PathBuf>,
-    roms_path: Signal<std::path::PathBuf>,
-    snap_file: Signal<std::path::PathBuf>,
-    show_context_menu: Signal<bool>,
-) -> Element {
-    let mut menu_x = use_signal(|| 0_i32);
-    let mut menu_y = use_signal(|| 0_i32);
-
-    let mut favourite_filter = use_signal(String::new);
-    let filtered_favourites = use_memo(move || {
-        let filter = favourite_filter();
-        let all_favourites = favourites();
-        all_favourites
-            .iter()
-            .filter(|item| item.description().to_lowercase().contains(&filter.to_lowercase()))
-            .cloned()
-            .collect::<Vec<Game>>()
-    });
-
-    let handle_context_menu = move |event: Event<MouseData>| {
-        event.stop_propagation();
-        event.prevent_default();
-        let (x, y) = (event.coordinates().client().x as i32, event.coordinates().client().y as i32);
-        menu_x.set(x);
-        menu_y.set(y);
-        show_context_menu.set(true);
-    };
-
-    let mut selected_favourite = use_signal(|| (String::new(), String::new(), false));
-
-    let mut favourite_snap_data = use_signal(|| "".to_string());
-
-    rsx! {
-        div {
-            class: "tab-panel active",
-            // Header
-            h2 { {t!("favourite_games")} }
-            p {
-                margin_bottom: "1.5em",
-                {t!("double_click_on_a_game_to_launch_right_click_for_more_options")}
-            }
-            // Content Layout
-            div {
-                class: "row",
-                // Left Column: Favourites List and Filter
-                div {
-                    class: "column",
-                    // Favourites List
-                    select {
-                        style: "max-width: 500px;",
-                        resize: "both",
-                        autocomplete: "on",
-                        size: 20,
-                        oncontextmenu: handle_context_menu,
-                        onchange: move |event| {
-                            let rom = event.value().clone();
-                            let description = favourites.read().iter()
-                                .find(|game| game.rom().clone() == rom)
-                                .map(|game| game.description().clone())
-                                .unwrap_or_default();
-                            let snap = favourites.read().iter()
-                                .find(|game| game.rom().clone() == rom)
-                                .map(|game| game.snap())
-                                .unwrap_or_default();
-                            favourite_snap_data.set(Game::new(&rom, &description, snap).get_snap(&snap_file().display().to_string()).unwrap());
-                            selected_favourite.set((rom, description, snap));
-                        },
-                        ondoubleclick: move |_| {
-                            let (rom, description, snap) = selected_favourite();
-                            let game = Game::new(&rom, &description, snap);
-                            let _ = game.launch(&mame_executable(), &roms_path());
-                        },
-                        onkeypress: move |ev: Event<KeyboardData>| {
-                            if ev.key() == Key::Enter {
-                                let (rom, description, snap) = selected_favourite();
-                                let game = Game::new(&rom, &description, snap);
-                                let _ = game.launch(&mame_executable(), &roms_path());
-                            }
-                        },
-                        for game in filtered_favourites() {
-                            option {
-                                value: game.rom().clone(),
-                                {game.description().clone()}
-                            }
-                        }
-                    }
-                    // Context Menu
-                    {
-                        if show_context_menu() {
-                            rsx! {
-                                div {
-                                    class: "popup",
-                                    style: "left: {menu_x()}px; top: {menu_y()}px;",
-                                    div {
-                                        style: "cursor: pointer; padding: 10px;",
-                                        onclick: move |_| {
-                                            let (rom, description, snap) = selected_favourite();
-                                            let favourite = Game::new(&rom, &description, snap);
-                                            let _ = favourite.launch(&mame_executable(), &roms_path());
-                                            show_context_menu.set(false);
-                                        },
-                                        {t!("launch_game")}
-                                    }
-                                    div {
-                                        style: "cursor: pointer; padding: 10px;",
-                                        onclick: move |_| {
-                                            let config = Config::new().unwrap();
-                                            let (rom, description, snap) = selected_favourite();
-                                            let favourite = Game::new(&rom, &description, snap);
-                                            let new_favourites = crate::games::remove_favourite(&config, &mut favourites(), &favourite);
-                                            favourites.set(new_favourites);
-                                            show_context_menu.set(false);
-                                        },
-                                        {t!("remove_from_favourites")}
-                                    }
-                                }
-                            }
-                        } else {
-                            rsx! {}
-                        }
-                    }
-                    // Filter Input
-                    div {
-                        div {
-                            class: "column",
-                            input {
-                                r#type: "text",
-                                size: 50,
-                                oninput: move |evt| {
-                                    favourite_filter.set(evt.value());
-                                }
-                            }
-                            label {
-                                {t!("type_the_name_of_a_game_to_search_for_it")}
-                            }
-                        }
-                    }
-                }
-                // Right Column: Snapshot
-                div {
-                    class: "snap",
-                    img {
-                        src: "{favourite_snap_data()}",
-                        width: 500,
-                    }
-                }
-            }
-        }
-    }
-}
 
 /// Component for the Settings tab content.
 #[component]
@@ -437,7 +339,7 @@ fn SettingsTab(
                                 }
                             },
                             Err(e) => {
-                                panic!("{}", e);
+                                panic!("{}", e); // Consider better error handling
                             }
                         }
                     },
@@ -466,7 +368,7 @@ fn SettingsTab(
                                 }
                             },
                             Err(e) => {
-                                panic!("{}", e);
+                                panic!("{}", e); // Consider better error handling
                             }
                         }
                     },
@@ -495,7 +397,7 @@ fn SettingsTab(
                                 }
                             },
                             Err(e) => {
-                                panic!("{}", e);
+                                panic!("{}", e); // Consider better error handling
                             }
                         }
                     },
@@ -508,7 +410,7 @@ fn SettingsTab(
                     class: "row",
                     button {
                         onclick: move |_| {
-                            let mut config = Config::new().unwrap();
+                            let mut config = Config::new().unwrap(); // Consider better error handling
                             config.mame_executable = mame_executable();
                             config.roms_path = roms_path();
                             config.snap_file = snap_file();
@@ -526,7 +428,7 @@ fn SettingsTab(
                     button {
                         class: "action-button",
                         onclick: move |_| async move {
-                            let config_third_clone = Config::new().unwrap();
+                            let config_third_clone = Config::new().unwrap(); // Consider better error handling
                             let config_fourth_clone = config_third_clone.clone();
                             let config_fifth_clone = config_third_clone.clone();
                             let config_sixth_clone = config_third_clone.clone();
@@ -536,14 +438,14 @@ fn SettingsTab(
                                 move || {
                                     // Executed in a blocking thread
                                     crate::games::get_xml_roms(&config_third_clone)
-                                    .unwrap_or_else(|_| { panic!("{}",  t!("cannot_get_xml_data_from_mame").to_string() )})
+                                    .unwrap_or_else(|_| { panic!("{}",  t!("cannot_get_xml_data_from_mame").to_string() )}) // Consider better error handling
                                 }
                             );
                             let xml_string_result = xml_handle.await;
                             let xml_string: String = match xml_string_result {
                                 Ok(s) => s, // Ok, the task has finished
                                 Err(_) => {
-                                    panic!("{}", t!("cannot_get_xml_data_from_mame").to_string());
+                                    panic!("{}", t!("cannot_get_xml_data_from_mame").to_string()); // Consider better error handling
                                 }
                             };
 
@@ -555,15 +457,13 @@ fn SettingsTab(
                                     // This closure executes in a dedicated blocking thread pool.
                                     // It performs the potentially heavy XML parsing.
                                     crate::games::get_all_roms(&config_fourth_clone, &xml_string) // Use the cloned config and the moved xml_string
-                                        .unwrap_or_else(|_| {
-                                            panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string());
+                                    .unwrap_or_else(|_| {
+                                            panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string()); // Consider better error handling
                                         })
                                 }
                             );
-
                             // Await the result from the parsing task.
                             let parse_result: Result<(Vec<String>, Vec<String>), tokio::task::JoinError> = parse_handle.await;
-
                             // Extract the result and handle potential errors that occurred within the blocking task itself
                             let (roms, descriptions) = match parse_result {
                                 Ok(tuple) => {
@@ -571,7 +471,7 @@ fn SettingsTab(
                                     tuple
                                 }
                                 Err(_) => {
-                                    panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string());
+                                    panic!("{}", t!("cannot_read_all_roms_and_their_descriptions").to_string()); // Consider better error handling
                                 }
                             };
 
@@ -581,6 +481,7 @@ fn SettingsTab(
                             let mut working_roms = Vec::with_capacity(total_roms);
                             let mut working_snaps = Vec::with_capacity(total_roms);
                             let num_batches = total_roms.div_ceil(BATCH_SIZE);
+
                             for batch_index in 0..num_batches {
                                 let start_index = batch_index * BATCH_SIZE;
                                 let end_index = usize::min((batch_index + 1) * BATCH_SIZE, total_roms);
@@ -601,12 +502,11 @@ fn SettingsTab(
                                         batch
                                     }
                                     Err(e) => {
-                                        panic!("{}", t!("rom_verification_task_error", error = e));
+                                        panic!("{}", t!("rom_verification_task_error", error = e)); // Consider better error handling
                                     }
-                                };                                
-                                //let roms_batch_results = crate::games::verify_batch_roms(&config_fifth_clone, current_batch);
+                                };
                                 working_roms.extend(roms_batch_results);
-                                
+
                                 status.set(t!("verifying_snaps.from.to.of.total", from = (start_index + 1), to = end_index, total = total_roms).into());
                                 let current_batch_owned: Vec<String> = current_batch.to_vec();
                                 let config_clone_for_rom_verify = config_fifth_clone.clone();
@@ -623,11 +523,12 @@ fn SettingsTab(
                                         batch
                                     }
                                     Err(e) => {
-                                        panic!("{}", t!("snap_verification_task_error", error = e));
+                                        panic!("{}", t!("snap_verification_task_error", error = e)); // Consider better error handling
                                     }
-                                };                                
+                                };
                                 working_snaps.extend(snaps_batch_results);
                             }
+
                             if !roms.is_empty() {
                                 for (i, rom) in roms.iter().enumerate() {
                                     if working_roms.get(i).copied().unwrap_or(false) {
@@ -636,15 +537,16 @@ fn SettingsTab(
                                     }
                                 }
                             }
+
                             status.set(t!("saving_all_games").into());
                             match crate::games::save(&config_sixth_clone, &all_games) {
                                 Ok(_) => {},
                                 Err(e) => {
-                                    panic!("{}", t!("error_while_saving_games_list.error", error = e.to_string()).to_string());
+                                    panic!("{}", t!("error_while_saving_games_list.error", error = e.to_string()).to_string()); // Consider better error handling
                                 }
                             };
                             status.set(t!("complete").into());
-                            games.set(all_games);
+                            games.set(all_games); // Update the games signal in App
                         },
                         {t!("refresh_games_list")}
                     }
@@ -700,22 +602,18 @@ fn AboutTab() -> Element {
 #[component]
 fn App() -> Element {
     let mut selected_tab = use_signal(|| Tab::Games);
-
     let config = match Config::new() {
         Ok(c) => c,
-        Err(e) => panic!("{}", t!("error.error", error = e.to_string()).to_string()),
+        Err(e) => panic!("{}", t!("error.error", error = e.to_string()).to_string()), // Consider better error handling
     };
-
     let config_clone = config.clone();
     let mame_executable = use_signal(|| config_clone.mame_executable);
     let snap_file = use_signal(|| config_clone.snap_file);
     let roms_path = use_signal(|| config_clone.roms_path);
-
-    let games = use_signal(|| crate::games::load(&config).unwrap());
-    let favourites = use_signal(|| crate::games::load_favourites(&config).unwrap());
+    let games = use_signal(|| crate::games::load(&config).unwrap_or_default()); // Handle error loading games
+    let favourites = use_signal(|| crate::games::load_favourites(&config).unwrap_or_default()); // Handle error loading favourites
 
     let status = use_signal(|| String::from(""));
-
     let mut show_context_menu = use_signal(|| false);
 
     let hide_menu = move |_| {
@@ -755,31 +653,40 @@ fn App() -> Element {
                 onclick: hide_menu,
                 class: "tab-content",
                 if selected_tab() == Tab::Games {
-                    GamesTab {
-                        games,
-                        mame_executable,
-                        roms_path,
-                        snap_file,
-                        favourites,
-                        show_context_menu,
+                    GameListTab {
+                        items: games, // Pass the main games list
+                        all_games: games, // Pass the main games list (needed for add_favourite logic)
+                        favourites: favourites, // Pass favourites for context menu logic
+                        mame_executable: mame_executable,
+                        roms_path: roms_path,
+                        snap_file: snap_file,
+                        show_context_menu: show_context_menu,
+                        header_text: t!("all_games").to_string(),
+                        filter_label_text: t!("type_the_name_of_a_game_to_search_for_it").to_string(),
+                        is_favourite_list: false, // Flag for Games tab
                     }
                 }
                 if selected_tab() == Tab::Favourites {
-                    FavouritesTab {
-                        favourites,
-                        mame_executable,
-                        roms_path,
-                        snap_file,
-                        show_context_menu,
+                     GameListTab {
+                        items: favourites, // Pass the favourites list
+                        all_games: games, // Still need access to all_games to get full Game struct if needed (e.g., add_favourite from games tab logic might implicitly be here, though less likely). It's safer to pass it.
+                        favourites: favourites, // Pass favourites
+                        mame_executable: mame_executable,
+                        roms_path: roms_path,
+                        snap_file: snap_file,
+                        show_context_menu: show_context_menu,
+                        header_text: t!("favourite_games").to_string(),
+                        filter_label_text: t!("type_the_name_of_a_game_to_search_for_it").to_string(),
+                        is_favourite_list: true, // Flag for Favourites tab
                     }
                 }
                 if selected_tab() == Tab::Settings {
                     SettingsTab {
-                        mame_executable,
-                        roms_path,
-                        snap_file,
-                        status,
-                        games,
+                        mame_executable: mame_executable,
+                        roms_path: roms_path,
+                        snap_file: snap_file,
+                        status: status,
+                        games: games, // Pass games for the refresh logic in SettingsTab
                     }
                 }
                 if selected_tab() == Tab::About {

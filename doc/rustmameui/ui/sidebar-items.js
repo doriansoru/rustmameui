@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["ABOUT","APP_NAME","BATCH_SIZE","TABS_CSS"],"enum":["Tab"],"fn":["AboutTab","App","FavouritesTab","GamesTab","SettingsTab","check_dialog_utility","draw"],"struct":["FavouritesTabProps","GamesTabProps","SettingsTabProps"]};
+window.SIDEBAR_ITEMS = {"constant":["ABOUT","APP_NAME","BATCH_SIZE","TABS_CSS"],"enum":["Tab"],"fn":["AboutTab","App","GameListTab","SettingsTab","check_dialog_utility","draw"],"struct":["GameListTabProps","SettingsTabProps"]};
