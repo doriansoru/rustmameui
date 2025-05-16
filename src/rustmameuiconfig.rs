@@ -40,6 +40,18 @@ pub struct Config {
     pub snap_file: PathBuf,
 }
 
+// Implement the Default trait
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            project_config_dir: PathBuf::new(), // Empty path
+            mame_executable: PathBuf::new(),    // Empty path
+            roms_path: PathBuf::new(),          // Empty path
+            snap_file: PathBuf::new(),          // Empty path
+        }
+    }
+}
+
 impl Config {
     /// Creates a new `Config` instance by loading settings from the configuration file
     /// and environment variables.

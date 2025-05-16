@@ -59,6 +59,18 @@ error_fetching_snap.error:
 error.error:
   en: "Error: %{error}"
   it: "Errore: %{error}"
+error_launching_game.error:
+  en: "Error while launching the game: %{error}"
+  it: "Errore durante l'avvio del gioco: %{error}"  
+error_loading_configuration.error:
+  en: "Error loading the configuration: %{error}"
+  it: "Errore durante la lettura della configurazione: %{error}"
+error_loading_games.error:
+  en: "Error loading games: %{error}"
+  it: "Errore durante il caricamento dei giochi: %{error}"
+error_loading_favourites.error:
+  en: "Error loading favourites: %{error}"
+  it: "Errore durante il caricamento dei preferiti: %{error}"  
 error_no_dialog_utility:
   en: "Error: No dialog utility has been found. Install 'zenity' or 'kdialog' to open the file chooser dialog"
   it: "Errore: Non è stata trovata alcuna app per le finestre di dialogo. Installa 'zenity' o 'kdialog' per aprile la finestra del selettore di file"

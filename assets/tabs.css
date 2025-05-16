@@ -22,6 +22,19 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   }
 
+  .error-message {
+    color: #dc2626; /* Un rosso un po' meno acceso, più "muted" */
+    background-color: #fef2f2; /* Uno sfondo rosa molto chiaro */
+    border: 1px solid #f87171; /* Un bordo rosso un po' più chiaro del testo */
+    margin: 15px 0; /* Margine consistente con altri elementi come i paragrafi */
+    padding: 10px 15px; /* Padding interno */
+    border-radius: 5px; /* Angoli arrotondati come il container principale */
+    font-size: 1rem; /* Dimensione del font standard */
+    line-height: 1.4; /* Altezza della linea leggermente ridotta */
+    text-align: left; /* Allinea il testo a sinistra di default */
+    /* font-weight: bold; /* Opzionale: puoi renderlo grassetto se vuoi più enfasi */
+}
+
   /* Intestazione tab */
   .tabs-header {
     display: flex;

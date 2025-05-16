@@ -66,7 +66,7 @@ impl Game {
     /// (`data:image/png;base64,...`) on success. Returns an empty string if `snap` is false.
     /// Returns a `Box<dyn std::error::Error>` if the zip file cannot be opened,
     /// the snapshot file is not found within the zip, or an I/O error occurs during reading or encoding.
-    pub fn get_snap(&self, snap_file: &String) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn get_snap(&self, snap_file: &String) -> Result<String, Box<dyn std::error::Error + Send + Sync + 'static>> {
         if !self.snap() {
             return Ok("".into());
         }
@@ -110,11 +110,10 @@ impl Game {
     /// `Box<dyn std::error::Error>` if an error occurs while trying to execute
     /// the MAME process.
     pub fn launch(&self, mame_executable: &PathBuf, roms_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-        let mut full_rom = roms_path.to_path_buf();
-        full_rom.push(self.rom());
-        full_rom.set_extension("zip");
         let _ = std::process::Command::new(mame_executable)
-            .arg(full_rom).spawn()?;
+            .arg("-rp")
+            .arg(roms_path.display().to_string())
+            .arg(self.rom()).spawn()?;
         Ok(())
     }
 
