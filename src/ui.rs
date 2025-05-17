@@ -47,7 +47,7 @@ pub fn draw() {
 }
 
 /// Checks if a native file dialog utility (zenity or kdialog) is installed.
-fn check_dialog_utility() -> Result<(), String> {
+pub fn check_dialog_utility() -> Result<(), String> {
     let mut found = false;
     if which::which("zenity").is_ok() {
         found = true;

@@ -38,10 +38,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set the application's locale for rust-i18n based on the extracted code.
     rust_i18n::set_locale(lang_code);
 
-    // Draw and launch the main application UI. This is typically a blocking call
-    // until the UI window is closed.
-    ui::draw();
+    match ui::check_dialog_utility() {
+        Ok(_) => {
+            // Draw and launch the main application UI. This is typically a blocking call
+            // until the UI window is closed.
+            ui::draw();
 
-    // Return Ok(()) indicating successful completion.
-    Ok(())
+            // Return Ok(()) indicating successful completion.
+            Ok(())
+        },
+        Err(e) => {
+            println!("{}", e);
+            Ok(())
+        }
+    }
 }
