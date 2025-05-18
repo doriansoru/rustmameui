@@ -46,6 +46,7 @@ pub fn draw() {
     launch_app();
 }
 
+#[cfg(target_os = "linux")]
 /// Checks if a native file dialog utility (zenity or kdialog) is installed.
 pub fn check_dialog_utility() -> Result<(), String> {
     let mut found = false;
@@ -360,6 +361,8 @@ fn SettingsTab(
                 }
                 button {
                     onclick: move |_| {
+
+                        #[cfg(target_os = "linux")]
                         match check_dialog_utility() {
                             Ok(_) => {
                                 if let Some(file) = FileDialog::new()
@@ -371,6 +374,13 @@ fn SettingsTab(
                             Err(e) => {
                                 panic!("{}", e); 
                             }
+                        }
+
+                        #[cfg(target_os = "windows")]
+                        if let Some(file) = FileDialog::new()
+                            .add_filter(t!("all_files"), &["*"])
+                            .pick_file() {
+                            mame_executable.set(file);
                         }
                     },
                     {t!("browse")}
@@ -389,6 +399,7 @@ fn SettingsTab(
                 }
                 button {
                     onclick: move |_| {
+                        #[cfg(target_os = "linux")]
                         match check_dialog_utility() {
                             Ok(_) => {
                                 if let Some(directory) = FileDialog::new()
@@ -401,6 +412,13 @@ fn SettingsTab(
                                 panic!("{}", e); 
                             }
                         }
+
+                        #[cfg(target_os = "windows")]
+                        if let Some(directory) = FileDialog::new()
+                            .add_filter(t!("all_files"), &["*"])
+                            .pick_folder() {
+                            roms_path.set(directory);
+                        }                        
                     },
                     {t!("browse")}
                 }
@@ -418,6 +436,7 @@ fn SettingsTab(
                 }
                 button {
                     onclick: move |_| {
+                        #[cfg(target_os = "linux")]
                         match check_dialog_utility() {
                             Ok(_) => {
                                 if let Some(file) = FileDialog::new()
@@ -429,6 +448,13 @@ fn SettingsTab(
                             Err(e) => {
                                 panic!("{}", e); 
                             }
+                        }
+
+                        #[cfg(target_os = "windows")]
+                        if let Some(file) = FileDialog::new()
+                            .add_filter(t!("zip_file"), &["*.zip"])
+                            .pick_file() {
+                            snap_file.set(file);
                         }
                     },
                     "Browse"

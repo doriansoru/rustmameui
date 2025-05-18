@@ -178,9 +178,9 @@ impl Config {
             "mame_executable = \"{}\"\n\
              roms_path = \"{}\"\n\
              snap_file = \"{}\"\n",
-            self.mame_executable.display(),
-            self.roms_path.display(),
-            self.snap_file.display()
+            self.mame_executable.display().to_string().replace("\\", "\\\\"),
+            self.roms_path.display().to_string().replace("\\", "\\\\"),
+            self.snap_file.display().to_string().replace("\\", "\\\\")
         );
 
         // Write the file
