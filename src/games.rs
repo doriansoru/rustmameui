@@ -12,6 +12,26 @@ use crate::rustmameuiconfig::Config;
 use crate::game::Game;
 use std::io::BufReader;
 use rust_i18n::t;
+use thiserror::Error; // Add this import
+
+/// Custom error type for operations within the `games` module.
+#[derive(Error, Debug)]
+pub enum GamesError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("UTF-8 decoding error: {0}")]
+    FromUtf8(#[from] std::string::FromUtf8Error),
+    #[error("XML parsing error: {0}")]
+    Xml(#[from] quick_xml::Error),
+    #[error("JSON serialization/deserialization error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("Zip file error: {0}")]
+    Zip(#[from] zip::result::ZipError),
+    #[error("Error executing MAME command: {0}")]
+    MameCommandExecution(std::io::Error),
+    #[error("Cannot read ROMs path from configuration.")]
+    MissingRomsPathConfig, 
+}
 
 /// Executes the MAME executable with the `-lx` argument to get the list of
 /// supported games in XML format.
@@ -24,12 +44,13 @@ use rust_i18n::t;
 /// # Returns
 ///
 /// A `Result` containing the XML output as a `String` on success,
-/// or a `Box<dyn std::error::Error>` if the command execution fails or
+/// or a `GamesError` if the command execution fails or
 /// the output is not valid UTF-8.
-pub fn get_xml_roms(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
+pub fn get_xml_roms(config: &Config) -> Result<String, GamesError> { // Updated return type
     let output = Command::new(&config.mame_executable)
         .arg("-lx")
-        .output()?;
+        .output()
+        .map_err(GamesError::MameCommandExecution)?; // Map io::Error to custom error
     let xml_string = String::from_utf8(output.stdout)?;
     Ok(xml_string)
 }
@@ -51,9 +72,15 @@ pub fn get_xml_roms(config: &Config) -> Result<String, Box<dyn std::error::Error
 /// A `Result` containing a tuple `(Vec<String>, Vec<String>)` on success,
 /// where the first vector contains the ROM names and the second contains
 /// the corresponding descriptions. Both vectors are sorted alphabetically by ROM name.
-/// Returns a `Box<dyn std::error::Error>` if an XML parsing error occurs.
-pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, Vec<String>), Box<dyn std::error::Error>> {
+/// Returns a `GamesError` if an XML parsing error occurs or if roms_path is not set.
+pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, Vec<String>), GamesError> { // Updated return type
     let roms_path = &config.roms_path;
+    // Assuming config validation ensures roms_path is not empty before this point,
+    // but adding a check just in case based on the original code's structure.
+    if roms_path.as_os_str().is_empty() {
+        return Err(GamesError::MissingRomsPathConfig);
+    }
+
     let mut reader = Reader::from_str(xml_string);
     reader.config_mut().trim_text(true);
     reader.config_mut().check_end_names = false;
@@ -68,7 +95,6 @@ pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, V
     let mut is_bios = false;
 
     let mut good_driver_count = 0;
-
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) if e.name().as_ref() == b"machine" => {
@@ -91,14 +117,16 @@ pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, V
                 current_description = Some(reader.read_text(e.name())?.to_string());
             },
             Ok(Event::Empty(ref e)) if e.name().as_ref() == b"driver" => {
+                // process_driver returns quick_xml::Error, which is handled by the ? operator
                 process_driver(e, &current_machine, &current_description, is_bios, roms_path, &mut roms, &mut descriptions, &mut good_driver_count)?;
             },
             Ok(Event::Start(ref e)) if e.name().as_ref() == b"driver" => {
+                 // process_driver returns quick_xml::Error, which is handled by the ? operator
                 process_driver(e, &current_machine, &current_description, is_bios, roms_path, &mut roms, &mut descriptions, &mut good_driver_count)?;
             },
             Ok(Event::Eof) => break,
             Err(e) => {
-                return Err(e.into());
+                return Err(GamesError::Xml(e)); // Map quick_xml::Error to custom error
             },
             _ => (),
         }
@@ -106,7 +134,18 @@ pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, V
     }
 
     roms.sort();
-    Ok((roms, descriptions))
+    // The original code returned descriptions in the same order as roms after sorting.
+    // Re-pairing them here based on rom name.
+    let mut paired_roms_descriptions: Vec<(String, String)> = roms.into_iter()
+        .zip(descriptions)
+        .collect();
+    paired_roms_descriptions.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let sorted_roms = paired_roms_descriptions.iter().map(|(rom, _)| rom.clone()).collect();
+    let sorted_descriptions = paired_roms_descriptions.iter().map(|(_, description)| description.clone()).collect();
+
+
+    Ok((sorted_roms, sorted_descriptions))
 }
 
 /// Verifies the presence and integrity of a batch of ROM files using `mame -verifyroms`.
@@ -125,22 +164,23 @@ pub fn get_all_roms(config: &Config, xml_string: &str) -> Result<(Vec<String>, V
 /// A `Vec<bool>` where each boolean corresponds to a ROM in the input slice,
 /// indicating `true` if MAME verified it successfully (i.e., the ROM name
 /// was NOT found in the standard error output), and `false` otherwise.
-/// If the `mame -verifyroms` command fails to execute, an error is printed,
-/// and a vector of `false` values is returned for all ROMs.
+/// If the `mame -verifyroms` command fails to execute, an error is printed (using eprintln! as before),
+/// and a vector of `false` values is returned for all ROMs. This function
+/// keeps its `Vec<bool>` return type as it's used for filtering, not error propagation.
 pub fn verify_batch_roms(config: &Config, roms: &[String]) -> Vec<bool> {
     let mut command = Command::new(&config.mame_executable);
+    command.arg("-rp");
+    command.arg(&config.roms_path);
     command.arg("-verifyroms");
     for rom in roms {
         command.arg(rom);
     }
 
-    let output = Command::new(&config.mame_executable)
-        .args(command.get_args())
+    let output = command
         .output()
         .inspect_err(|e| {
             eprintln!("{}",
                 t!("error_while_executing.mame_executable.error", mame_executable = config.mame_executable.display().to_string(), error = e.to_string())
-                //"Error while executing '{} -verifyroms': {}", config.mame_executable.display(), e
             );
         })
         .unwrap_or_else(|_| std::process::Output {
@@ -178,8 +218,9 @@ pub fn verify_batch_roms(config: &Config, roms: &[String]) -> Vec<bool> {
 /// A `Vec<bool>` where each boolean corresponds to a ROM in the input slice,
 /// indicating `true` if the corresponding `.png` file was found in the zip file,
 /// and `false` otherwise. If the snapshot file cannot be opened or is not a valid
-/// zip archive, an error is printed, and a vector of `false` values is returned
-/// for all ROMs.
+/// zip archive, an error is printed (using eprintln! as before), and a vector
+/// of `false` values is returned for all ROMs. This function
+/// keeps its `Vec<bool>` return type for filtering purposes.
 pub fn verify_batch_snaps(config: &Config, roms: &[String]) -> Vec<bool> {
     let snap_file_path = config.snap_file.clone();
     let roms_to_check = roms.to_vec();
@@ -187,25 +228,31 @@ pub fn verify_batch_snaps(config: &Config, roms: &[String]) -> Vec<bool> {
     match std::fs::File::open(snap_file_path) {
         Ok(f) => {
             let reader = BufReader::new(f);
-            // Note: .unwrap() here means a zip error will panic.
-            let mut archive = zip::ZipArchive::new(reader).unwrap();
-
-            for rom in roms_to_check.iter() {
-                match archive.by_name(format!("{}.png", rom).as_str()) {
-                    Ok(_) => {
-                        local_found.push(true);
-                    },
-                    Err(..) => {
-                        local_found.push(false);
+            match zip::ZipArchive::new(reader) {
+                Ok(mut archive) => {
+                    for rom in roms_to_check.iter() {
+                        match archive.by_name(format!("{}.png", rom).as_str()) {
+                            Ok(_) => {
+                                local_found.push(true);
+                            },
+                            Err(..) => {
+                                local_found.push(false);
+                            }
+                        };
                     }
-                };
+                },
+                Err(e) => {
+                     eprintln!("{}",
+                        t!("error_opening_zip_archive.error", error = e.to_string())
+                    );
+                    return vec![false; roms.len()];
+                }
             }
 
         },
-        Err(_) => {
+        Err(e) => {
             eprintln!("{}",
-                t!("cannot_open_the_snaps_file")
-                //"Cannot open the snaps file."
+                t!("cannot_open_the_snaps_file.error", error = e.to_string())
             );
             return vec![false; roms.len()];
         }
@@ -227,10 +274,10 @@ pub fn verify_batch_snaps(config: &Config, roms: &[String]) -> Vec<bool> {
 ///
 /// # Returns
 ///
-/// A `std::io::Result<()>` indicating success or failure. Returns an error
+/// A `Result<(), GamesError>` indicating success or failure. Returns an error
 /// if the file cannot be created, the data cannot be serialized, or the data
 /// cannot be written to the file.
-pub fn save(config: &Config, games: &Vec<Game>) -> std::io::Result<()> {
+pub fn save(config: &Config, games: &Vec<Game>) -> Result<(), GamesError> { // Updated return type
     let mut games_file = PathBuf::from(&config.project_config_dir);
     games_file.push("games");
     games_file.set_extension("json");
@@ -254,10 +301,12 @@ pub fn save(config: &Config, games: &Vec<Game>) -> std::io::Result<()> {
 /// # Returns
 ///
 /// A `Result` containing a `Vec<Game>` on success. Returns an empty vector
-/// if the file doesn't exist. Returns a `Box<dyn std::error::Error>` if the
+/// if the file doesn't exist.
+/// Returns a `GamesError` if the
 /// file exists but cannot be read or the content cannot be deserialized into
-/// a `Vec<Game>`. The loaded games are sorted by description before being returned.
-pub fn load(config: &Config) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
+/// a `Vec<Game>`.
+/// The loaded games are sorted by description before being returned.
+pub fn load(config: &Config) -> Result<Vec<Game>, GamesError> { // Updated return type
     let mut games_file = PathBuf::from(&config.project_config_dir);
     games_file.push("games");
     games_file.set_extension("json");
@@ -284,10 +333,12 @@ pub fn load(config: &Config) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
 /// # Returns
 ///
 /// A `Result` containing a `Vec<Game>` on success. Returns an empty vector
-/// if the file doesn't exist. Returns a `Box<dyn std::error::Error>` if the
+/// if the file doesn't exist.
+/// Returns a `GamesError` if the
 /// file exists but cannot be read or the content cannot be deserialized into
-/// a `Vec<Game>`. The loaded favourites are sorted by description before being returned.
-pub fn load_favourites(config: &Config) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
+/// a `Vec<Game>`.
+/// The loaded favourites are sorted by description before being returned.
+pub fn load_favourites(config: &Config) -> Result<Vec<Game>, GamesError> { // Updated return type
     let mut favourites_file = PathBuf::from(&config.project_config_dir);
     favourites_file.push("favourites");
     favourites_file.set_extension("json");
@@ -313,42 +364,37 @@ pub fn load_favourites(config: &Config) -> Result<Vec<Game>, Box<dyn std::error:
 ///
 /// # Returns
 ///
-/// A clone of the updated `favourites` vector after adding the game and attempting to save.
-/// Errors during file creation or writing are printed to `eprintln!`, and the function
-/// still returns the (potentially unsaved) updated vector. Serialization errors are also
-/// printed.
+/// A clone of the updated `favourites` vector after adding the game.
+/// Errors during file creation, writing, or serialization are printed to `eprintln!`.
 pub fn add_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -> Vec<Game> {
     favourites.push(game.clone());
     let mut favourites_file = PathBuf::from(&config.project_config_dir);
     favourites_file.push("favourites");
     favourites_file.set_extension("json");
 
-    let mut file = match std::fs::File::create(favourites_file) {
-        Ok(f) => f,
+    match std::fs::File::create(favourites_file) {
+        Ok(mut file) => {
+            match serde_json::to_string_pretty(favourites) {
+                Ok(json_string) => {
+                    if let Err(e) = file.write_all(json_string.as_bytes()) {
+                        eprintln!("{}",
+                            t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
+                        );
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{}",
+                        t!("error_while_serializing_the_favourites.error", error = e.to_string())
+                    );
+                }
+            }
+        },
         Err(e) => {
             eprintln!("{}",
                 t!("error_while_creating_the_favourites_file.error", error = e.to_string())
-                //"Error while creating the favourites file: {}", e
             );
-            return favourites.clone();
         }
     };
-    match serde_json::to_string_pretty(favourites) {
-        Ok(json_string) => {
-            if let Err(e) = file.write_all(json_string.as_bytes()) {
-                eprintln!("{}",
-                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
-                    //"Error while writing to the favourites file: {}", e
-                );
-            }
-        }
-        Err(e) => {
-            eprintln!("{}",
-                t!("error_while_serializing_the_favourites.error", error = e.to_string())
-                //"Error while serializing the favourites: {}", e
-            );
-        }
-    }
     sort(favourites);
     favourites.clone()
 }
@@ -368,43 +414,40 @@ pub fn add_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -
 /// # Returns
 ///
 /// A clone of the updated `favourites` vector after attempting to remove the game
-/// and save. Errors during file creation or writing are printed to `eprintln!`,
-/// and the function still returns the (potentially unsaved) updated vector.
-/// Errors during serialization will cause a panic (as per original code).
+/// and save. Errors during file creation, writing, or serialization are printed to `eprintln!`.
 pub fn remove_favourite(config: &Config, favourites: &mut Vec<Game>, game: &Game) -> Vec<Game> {
-    if let Some(index) = favourites.iter().position(|value| *value.rom() == *game.rom()) {
+    if let Some(index) = favourites.iter().position(|value| value.rom() == game.rom()) {
         favourites.swap_remove(index);
     }
     let mut favourites_file = PathBuf::from(&config.project_config_dir);
     favourites_file.push("favourites");
     favourites_file.set_extension("json");
 
-    let mut file = match std::fs::File::create(favourites_file) {
-        Ok(f) => f,
+    match std::fs::File::create(favourites_file) {
+        Ok(mut file) => {
+            match serde_json::to_string_pretty(favourites) {
+                Ok(json_string) => {
+                    if let Err(e) = file.write_all(json_string.as_bytes()) {
+                        eprintln!("{}",
+                            t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
+                        );
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{}",
+                        t!("error_while_serializing_the_favourites.error", error = e.to_string())
+                    );
+                    // The original code used panic! here, but eprintln! is more consistent with add_favourite
+                    // and likely more desirable in a UI application.
+                }
+            }
+        },
         Err(e) => {
             eprintln!("{}",
                 t!("error_while_creating_the_favourites_file.error", error = e.to_string())
-                //"Error while creating the favourites file: {}", e
             );
-            return favourites.clone();
         }
     };
-    match serde_json::to_string_pretty(favourites) {
-        Ok(json_string) => {
-            if let Err(e) = file.write_all(json_string.as_bytes()) {
-                eprintln!("{}",
-                    t!("error_while_writing_to_the_favourites_file.error", error = e.to_string())
-                    //"Error while writing to the favourites file: {}", e
-                );
-            }
-        }
-        Err(e) => {
-            panic!("{}", // Note: The original code uses panic! here, not eprintln!
-                t!("error_while_serializing_the_favourites.error", error = e.to_string()).to_string()
-            );
-            //"Error while serializing the favourites: {}", e
-        }
-    }
     sort(favourites);
     favourites.clone()
 }
@@ -447,7 +490,7 @@ fn process_driver(
     roms: &mut Vec<String>,
     descriptions: &mut Vec<String>,
     good_driver_count: &mut i32,
-) -> Result<(), quick_xml::Error> {
+) -> Result<(), quick_xml::Error> { // Keeping quick_xml::Error as it's localized to XML parsing
     if let Some(machine) = current_machine {
         if !is_bios {
             for attr in e.attributes().flatten() {

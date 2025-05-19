@@ -5,6 +5,22 @@
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use base64::{Engine as _};
+use thiserror::Error; // Add this import
+
+/// Custom error type for operations within the `game` module.
+#[derive(Error, Debug)]
+pub enum GameError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Zip file error: {0}")]
+    Zip(#[from] zip::result::ZipError),
+    #[error("Base64 decoding error: {0}")]
+    Base64Decode(#[from] base64::DecodeError), // Although we are encoding, it's good practice to include decode if you might decode elsewhere
+    #[error("Error executing command: {0}")]
+    CommandExecution(std::io::Error),
+    #[error("Snapshot file not found in zip: {0}")]
+    SnapshotNotFoundInZip(String),
+}
 
 /// Represents a single game entry with its details.
 ///
@@ -63,10 +79,11 @@ impl Game {
     /// # Returns
     ///
     /// A `Result` containing a `String` with the Base64-encoded PNG data as a data URL
-    /// (`data:image/png;base64,...`) on success. Returns an empty string if `snap` is false.
-    /// Returns a `Box<dyn std::error::Error>` if the zip file cannot be opened,
+    /// (`data:image/png;base64,...`) on success.
+    /// Returns an empty string if `snap` is false.
+    /// Returns a `GameError` if the zip file cannot be opened,
     /// the snapshot file is not found within the zip, or an I/O error occurs during reading or encoding.
-    pub fn get_snap(&self, snap_file: &String) -> Result<String, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    pub fn get_snap(&self, snap_file: &String) -> Result<String, GameError> { // Updated return type
         if !self.snap() {
             return Ok("".into());
         }
@@ -77,20 +94,16 @@ impl Game {
 
         // Get the PNG filename to look for in the zip file
         let png_name = format!("{}.png", self.rom());
-
         // Search and read from the zipfile
-        let mut zip_file = archive.by_name(&png_name)?;
-
+        let mut zip_file = archive.by_name(&png_name).map_err(|_| GameError::SnapshotNotFoundInZip(png_name))?; // Map zip error to custom error
         // Read the content of the png
         let mut png_data = Vec::new();
         std::io::Read::read_to_end(&mut zip_file, &mut png_data)?;
 
         // Convert the content to base64
         let base64_data = base64::engine::general_purpose::STANDARD.encode(&png_data);
-
         // Create the data URL for the html src attribute
         let data_url = format!("data:image/png;base64,{}", base64_data);
-
         Ok(data_url)
     }
 
@@ -106,14 +119,17 @@ impl Game {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` if the command is successfully spawned. Returns a
-    /// `Box<dyn std::error::Error>` if an error occurs while trying to execute
+    /// Returns `Ok(())` if the command is successfully spawned.
+    /// Returns a `GameError` if an error occurs while trying to execute
     /// the MAME process.
-    pub fn launch(&self, mame_executable: &PathBuf, roms_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-        let _ = std::process::Command::new(mame_executable)
+    pub fn launch(&self, mame_executable: &PathBuf, roms_path: &Path) -> Result<(), GameError> { // Updated return type
+        std::process::Command::new(mame_executable)
             .arg("-rp")
             .arg(roms_path.display().to_string())
-            .arg(self.rom()).spawn()?;
+            .arg(self.rom())
+            .spawn()
+            .map(|_| ()) // Discard the Child process struct, return Ok(())
+            .map_err(GameError::CommandExecution)?; // Map io::Error to custom error
         Ok(())
     }
 

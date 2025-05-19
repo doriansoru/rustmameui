@@ -2,26 +2,28 @@
 //! variables, saving the configuration, and managing the application's configuration directory.
 
 use std::path::PathBuf;
-use rust_i18n::t;
+use thiserror::Error; // Add this import
+use config::{ConfigError, Environment, File}; // Import necessary items from config crate
+use std::collections::HashMap; // Import HashMap
 
-/// A macro to create a boxed `std::io::Error` with a custom message.
-///
-/// This provides a convenient way to return a generic `Box<dyn std::error::Error>`
-/// containing an `io::Error` with `ErrorKind::Other`.
-///
-/// It supports two forms:
-/// - `box_err!($msg:expr)`: Takes a single string message.
-/// - `box_err!($fmt:expr, $($arg:tt)*)`: Takes a format string and arguments,
-///   similar to `format!`.
-macro_rules! box_err {
-    ($msg:expr) => {
-        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, $msg)))
-    };
-    // A version thich accepts a format similar to format!
-    ($fmt:expr, $($arg:tt)*) => {
-        Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!($fmt, $($arg)*))))
-    };
+
+/// Custom error type for operations within the `rustmameuiconfig` module.
+#[derive(Error, Debug)]
+pub enum ConfigErrorWithThisError { // Renamed to avoid clash with config::ConfigError
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Configuration error: {0}")]
+    Config(#[from] ConfigError),
+    #[error("Cannot get the system configuration directory.")]
+    CannotGetConfigDir,
+    #[error("Cannot create the application configuration directory: {path}")]
+    CannotCreateAppConfigDir { path: PathBuf },
+    #[error("Missing required configuration key: {key}")]
+    MissingConfigKey { key: String },
+    #[error("Error finding MAME executable: {0}")]
+    WhichError(#[from] which::Error),
 }
+
 
 /// Represents the application's configuration settings.
 ///
@@ -71,30 +73,26 @@ impl Config {
     /// # Returns
     ///
     /// Returns a `Result` containing the populated `Config` struct on success,
-    /// or a `Box<dyn std::error::Error>` if any step fails (e.g., cannot find config directory,
+    /// or a `ConfigErrorWithThisError` if any step fails (e.g., cannot find config directory,
     /// cannot create directory, cannot read file, missing required configuration keys).
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new() -> Result<Self, ConfigErrorWithThisError> { // Updated return type
         // Get the package name
         let package_name = env!("CARGO_PKG_NAME");
-        let config_dir = dirs::config_dir().unwrap_or_else(|| { panic!("{}", t!("cannot_get_the_system_configuration_directory").to_string()) });
+        let config_dir = dirs::config_dir().ok_or(ConfigErrorWithThisError::CannotGetConfigDir)?; // Replace panic!
 
         // Create the path of the configuration directory for this app
         let project_config_dir = config_dir.join(package_name);
-
         // Create this app configuration directory if it does not exist
         if !project_config_dir.exists() {
             // Create the project configuration directory
-            std::fs::create_dir_all(&project_config_dir).unwrap_or_else(|_| { panic!("{}", t!("cannot_create_the_app_configuration_directory").to_string()) });
+            std::fs::create_dir_all(&project_config_dir)
+                .map_err(|_| ConfigErrorWithThisError::CannotCreateAppConfigDir { path: project_config_dir.clone() })?; // Replace panic!
         }
 
         let mut config_file = project_config_dir.join(package_name);
         config_file.set_extension("toml");
-
         if !config_file.exists() {
-            let mame_executable = match which::which("mame") {
-                Ok(mame) => mame,
-                Err(_) => PathBuf::new()
-            };
+            let mame_executable = which::which("mame").unwrap_or_else(|_| PathBuf::new()); // which::which returns Result, unwrap_or_else handles Err
 
             let config = Self {
                 project_config_dir: project_config_dir.clone(),
@@ -102,47 +100,30 @@ impl Config {
                 roms_path: PathBuf::new(),
                 snap_file: PathBuf::new(),
             };
-
-            config.save().unwrap();
+            // Handle save error, perhaps logging it or propagating if save also returned Result
+            // For now, keeping the original behavior of unwrap() for the initial save
+             config.save().unwrap_or_else(|e| {
+                eprintln!("Error saving initial config: {}", e);
+            });
         }
 
         let settings = config::Config::builder()
-           .add_source(config::File::with_name(&config_file.display().to_string()))
+           .add_source(File::with_name(&config_file.display().to_string()))
             // Add in settings from the environment (with a prefix of APP)
             // Eg.. `PACKAGE_NAME_DEBUG=1 ./target/app` would set the `debug` key
-            .add_source(config::Environment::with_prefix(package_name))
-            .build()?.try_deserialize::<std::collections::HashMap<String, String>>()?;
+            .add_source(Environment::with_prefix(package_name))
+            .build()? // From ConfigError
+            .try_deserialize::<HashMap<String, String>>()?; // From ConfigError
 
+        let mame_executable = settings.get("mame_executable")
+            .ok_or(ConfigErrorWithThisError::MissingConfigKey { key: "mame_executable".to_string() })?; // Replace io::Error
 
-        let mame_executable = match settings.get("mame_executable") {
-            Some(v) => v,
-            None => {
-                return box_err!(
-                    t!("cannot_read_the_mame_executable_path_from_the_configuration_file")
-                    //"Cannot read the mame executable path from the configuration file"
-                );
-            }
-         };
+         let roms_path = settings.get("roms_path")
+            .ok_or(ConfigErrorWithThisError::MissingConfigKey { key: "roms_path".to_string() })?; // Replace io::Error
 
-        let roms_path = match settings.get("roms_path") {
-            Some(v) => v,
-            None => {
-                return box_err!(
-                    t!("cannot_read_the_roms_path_from_the_configuration_file")
-                    //"Cannot read the roms path from the configuration file"
-                );
-            }
-        };
+        let snap_file = settings.get("snap_file")
+            .ok_or(ConfigErrorWithThisError::MissingConfigKey { key: "snap_file".to_string() })?; // Replace io::Error
 
-        let snap_file = match settings.get("snap_file") {
-            Some(v) => v,
-            None => {
-                return box_err!(
-                    t!("cannot_read_the_snaps_file_path_from_the_configuration_file")
-                    //"Cannot read the snap file path from the configuration file"
-                );
-            }
-        };
 
         Ok(Self {
             project_config_dir,
@@ -162,9 +143,9 @@ impl Config {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` on success, or a `Box<dyn std::error::Error>` if an error occurs
+    /// Returns `Ok(())` on success, or a `ConfigErrorWithThisError` if an error occurs
     /// during file creation or writing.
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self) -> Result<(), ConfigErrorWithThisError> { // Updated return type
         use std::io::Write;
         use std::fs::File;
 
@@ -184,9 +165,8 @@ impl Config {
         );
 
         // Write the file
-        let mut file = File::create(&config_file)?;
-        file.write_all(content.as_bytes())?;
-
+        let mut file = File::create(&config_file)?; // From Io
+        file.write_all(content.as_bytes())?; // From Io
         Ok(())
     }
 }

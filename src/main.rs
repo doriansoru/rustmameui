@@ -12,10 +12,22 @@ mod ui;               // Module containing the Dioxus-based user interface logic
 
 // Import the Locale struct for determining the system locale.
 use locale_config::Locale;
+use thiserror::Error; // Add this import
+use crate::ui::UiError; // Import the UiError from the ui module
+
 
 // Initialize the rust-i18n crate, specifying the "locales" directory
 // for translation files and setting "en" as the fallback language.
 rust_i18n::i18n!("locales", fallback = "en");
+
+
+/// Custom error type for operations within the `main` module.
+#[derive(Error, Debug)]
+pub enum MainError {
+    #[error("UI error: {0}")]
+    UiError(#[from] UiError),
+}
+
 
 /// The main function where the application starts execution.
 ///
@@ -24,10 +36,9 @@ rust_i18n::i18n!("locales", fallback = "en");
 ///
 /// # Returns
 ///
-/// Returns `Ok(())` on successful execution, or a `Box<dyn std::error::Error>`
-/// if an error occurs during the process (though current implementation is simple
-/// and less prone to errors here).
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// Returns `Ok(())` on successful execution, or a `MainError`
+/// if an error occurs during the process.
+fn main() -> Result<(), MainError> { // Updated return type
     // Get the system locale string (e.g., "en_US.UTF-8", "it_IT").
     let sys_locale = Locale::current().to_string();
 
@@ -46,20 +57,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ui::draw();
 
             // Return Ok(()) indicating successful completion.
-            return Ok(())
+            Ok(())
         },
         Err(e) => {
-            println!("{}", e);
-            return Ok(())
+            // Print the error and return the custom MainError
+            eprintln!("{}", e); // Changed println! to eprintln! for consistency with error reporting
+            Err(MainError::UiError(e)) // Wrap and return the UiError
         }
     }
 
     #[cfg(target_os = "windows")]
-    // Draw and launch the main application UI. This is typically a blocking call
-    // until the UI window is closed.
-    ui::draw();
+    { // Added a block for windows to match the structure of linux
+        // Draw and launch the main application UI. This is typically a blocking call
+        // until the UI window is closed.
+        ui::draw();
 
-    #[cfg(target_os = "windows")]
-    // Return Ok(()) indicating successful completion.
-    Ok(())    
+        // Return Ok(()) indicating successful completion.
+        Ok(())
+    }
 }

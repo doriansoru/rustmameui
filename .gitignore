@@ -1,4 +1,4 @@
 /target
 /cfg
 /nvram
-src/*_orig.rs
+/src_orig
